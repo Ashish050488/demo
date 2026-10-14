@@ -11,9 +11,13 @@ import FormPreviewPane from "@/components/review/FormPreviewPane";
 import SectionFields from "@/components/review/SectionFields";
 import RequiredFieldsDrawer from "@/components/review/RequiredFieldsDrawer";
 import SectionRail from "@/components/review/SectionRail";
+import SheetImportDialog from "@/components/review/SheetImportDialog";
 import SourceDocumentDialog from "@/components/review/SourceDocumentDialog";
+import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
-import Notice from "@/components/ui/Notice";
+import SegmentedControl from "@/components/ui/SegmentedControl";
+import Skeleton, { FieldSkeletonGrid } from "@/components/ui/Skeleton";
+import StatusState from "@/components/ui/StatusState";
 import { useReviewSession } from "@/hooks/useReviewSession";
 import type { CaseField } from "@/types/cases";
 import { getNomineeNumber } from "@prefill/shared";
@@ -22,18 +26,7 @@ import { buildReviewSections, listProblemFieldKeys } from "@/utils/review-sectio
 
 const REQUIRED_REASON = "Required - empty";
 
-function PaneSwitch({ activePane, onChange }: { activePane: "form" | "mapping"; onChange: (pane: "form" | "mapping") => void }) {
-  return (
-    <div className="inline-flex rounded-full bg-canvas p-0.5 text-xs">
-      {(["form", "mapping"] as const).map((paneKey) => (
-        <button key={paneKey} type="button" onClick={() => onChange(paneKey)}
-          className={`rounded-full px-3 py-1 ${activePane === paneKey ? "bg-ink text-white" : "text-muted hover:text-ink"}`}>
-          {paneKey === "form" ? "Filled form" : "Field mapping"}
-        </button>
-      ))}
-    </div>
-  );
-}
+const PREVIEW_PANE_OPTIONS = [{ key: "form" as const, label: "Filled form" }, { key: "mapping" as const, label: "Field mapping" }];
 
 export default function CaseReviewPage() {
   const { caseId } = useParams<{ caseId: string }>();
@@ -47,6 +40,7 @@ export default function CaseReviewPage() {
   const [blockedFields, setBlockedFields] = useState<{ field: string; reason: string }[]>([]);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isRequiredDrawerOpen, setIsRequiredDrawerOpen] = useState(false);
+  const [isSheetImportOpen, setIsSheetImportOpen] = useState(false);
 
   const { shownFields, editedValues, formCheck, formRules, fieldsView } = session;
   const [activeNomineeNumber, setActiveNomineeNumber] = useState(1);
@@ -67,6 +61,7 @@ export default function CaseReviewPage() {
   const activeSection = sections[activeSectionIndex];
   const selectedField = shownFields.find((caseField) => caseField.field === selectedFieldKey) || activeSection?.fields.find((caseField) => caseField.page && (!activeSection.isNomineeSection || getNomineeNumber(caseField.field) === activeNomineeNumber)) || null;
 
+  const getSectionLabel = (fieldKey: string) => sections.find((section) => section.fields.some((caseField) => caseField.field === fieldKey))?.label || "";
   const openSection = (sectionIndex: number) => { setActiveSectionKey(sections[sectionIndex]?.key ?? null); setSelectedFieldKey(null); };
   function goToField(fieldKey: string) {
     const owningSection = sections.find((section) => section.fields.some((caseField) => caseField.field === fieldKey));
@@ -102,8 +97,11 @@ export default function CaseReviewPage() {
     router.push(`/cases/${caseId}/confirm`);
   }
 
-  if (session.loadError) return <div className="p-8"><Notice tone="error">{session.loadError}</Notice></div>;
-  if (!fieldsView || !formRules || !activeSection) return <p className="p-8 text-center text-sm text-muted">Filling the form…</p>;
+  if (session.loadError) {
+    return <StatusState tone="error" title="This case could not be opened" message={session.loadError} actionLabel="Try again" onAction={() => session.reloadFields(true)} />;
+  }
+  if (!fieldsView || !formRules) return <ReviewPageSkeleton />;
+  if (!activeSection) return <StatusState title="No fields to review" message="This form has no fields set up yet - check Form setup." />;
   return (
     <div className="flex h-full flex-col">
       <div className="grid min-h-0 flex-1 grid-cols-[12.5rem_minmax(0,0.95fr)_minmax(0,1.15fr)]">
@@ -121,24 +119,23 @@ export default function CaseReviewPage() {
               filledFieldKeys={filledFieldKeys} onSelectSection={(sectionKey) => openSection(sections.findIndex((section) => section.key === sectionKey))} />
           </div>
           <div className="space-y-2 border-t border-line p-3">
+            <Button size="small" className="w-full" onClick={() => setIsSheetImportOpen(true)}>Fill from Excel</Button>
             <Button variant="primary" className="w-full" onClick={handleContinue}>Continue to save →</Button>
             <Button size="small" className="w-full" disabled={isDownloading} onClick={handleDownloadPdf}>{isDownloading ? "Preparing…" : "Download PDF"}</Button>
           </div>
         </aside>
         <section className="flex min-h-0 flex-col border-r border-line bg-white">
-          <div className="flex items-center gap-2 border-b border-line px-4 py-2">
-            <h2 className="text-sm font-semibold">{activeSection.label}</h2>
-            <span className="text-xs text-muted">Section {activeSectionIndex + 1} of {sections.length}</span>
-            <div className="ml-auto flex gap-1.5">
+          <div className="flex h-12 shrink-0 items-center gap-2 whitespace-nowrap border-b border-line px-4">
+            <h2 className="min-w-0 truncate text-sm font-semibold" title={activeSection.label}>{activeSection.label}</h2>
+            <span className="shrink-0 text-xs tabular-nums text-muted">{activeSectionIndex + 1} / {sections.length}</span>
+            <div className="ml-auto flex shrink-0 gap-1.5">
               <button type="button" onClick={() => setIsRequiredDrawerOpen(true)}
-                className="inline-flex h-8 items-center gap-2 rounded-full border border-line bg-white px-3 text-xs font-medium hover:border-ink">
+                className="inline-flex h-8 shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-line bg-white px-3 text-xs font-medium hover:border-ink">
                 Required fields
-                <span className={`rounded-full px-1.5 text-[11px] font-semibold ${problemFieldKeys.size ? "bg-red-500 text-white" : "bg-emerald-600 text-white"}`}>
-                  {problemFieldKeys.size ? `${problemFieldKeys.size} left` : "✓ all done"}
-                </span>
+                <Badge tone={problemFieldKeys.size ? "danger" : "success"}>{problemFieldKeys.size ? `${problemFieldKeys.size} left` : "✓ all done"}</Badge>
               </button>
-              <Button size="small" disabled={activeSectionIndex === 0} onClick={() => openSection(activeSectionIndex - 1)}>← Previous</Button>
-              <Button size="small" disabled={activeSectionIndex === sections.length - 1} onClick={() => openSection(activeSectionIndex + 1)}>Next →</Button>
+              <Button size="small" disabled={activeSectionIndex === 0} onClick={() => openSection(activeSectionIndex - 1)} aria-label="Previous section">←<span className="hidden 2xl:inline">Previous</span></Button>
+              <Button size="small" disabled={activeSectionIndex === sections.length - 1} onClick={() => openSection(activeSectionIndex + 1)} aria-label="Next section"><span className="hidden 2xl:inline">Next</span>→</Button>
             </div>
           </div>
           <div className="min-h-0 flex-1 overflow-auto p-4">
@@ -147,14 +144,15 @@ export default function CaseReviewPage() {
               onSelectNominee={(nomineeNumber) => { setOpenedNomineeCount((current) => Math.max(current, nomineeNumber)); setActiveNomineeNumber(nomineeNumber); setSelectedFieldKey(null); }}
               onSelectField={(caseField) => setSelectedFieldKey(caseField.field)} onChooseTick={handleChooseTick} />
           </div>
-          <FieldDetailBar session={session} caseField={selectedField} onViewSource={setSourceField} onAddDocument={setAddDocumentNominee} />
+          <FieldDetailBar session={session} caseField={selectedField}
+            sectionLabel={(selectedField && getSectionLabel(selectedField.field)) || activeSection.label} onViewSource={setSourceField} onAddDocument={setAddDocumentNominee} />
         </section>
         <div className="flex min-h-0 flex-col">
           <div className="min-h-0 flex-1">
             {previewPane === "form"
-              ? <FormPreviewPane caseId={caseId} selectedField={selectedField} previewValue={selectedField ? getEffectiveValue(selectedField, editedValues) ?? "" : ""}
-                  headerActions={<PaneSwitch activePane={previewPane} onChange={setPreviewPane} />} />
-              : <div className="flex h-full flex-col"><div className="border-b border-line bg-white px-3 py-1.5"><PaneSwitch activePane={previewPane} onChange={setPreviewPane} /></div><div className="min-h-0 flex-1"><FieldMappingPane formId={fieldsView.formId} onSelectField={(fieldKey) => {
+              ? <FormPreviewPane caseId={caseId} pageCount={fieldsView.pageCount} selectedField={selectedField} previewValue={selectedField ? getEffectiveValue(selectedField, editedValues) ?? "" : ""}
+                  headerActions={<SegmentedControl options={PREVIEW_PANE_OPTIONS} activeKey={previewPane} onChange={setPreviewPane} />} />
+              : <div className="flex h-full flex-col"><div className="border-b border-line bg-white px-3 py-1.5"><SegmentedControl options={PREVIEW_PANE_OPTIONS} activeKey={previewPane} onChange={setPreviewPane} /></div><div className="min-h-0 flex-1"><FieldMappingPane formId={fieldsView.formId} onSelectField={(fieldKey) => {
                 const matchingField = shownFields.find((caseField) => caseField.field === `${fieldKey}_n1` || caseField.field === fieldKey);
                 if (matchingField) { goToField(matchingField.field); setPreviewPane("form"); }
               }} /></div></div>}
@@ -163,8 +161,23 @@ export default function CaseReviewPage() {
       </div>
       <SourceDocumentDialog caseId={caseId} caseField={sourceField} caseDocuments={session.caseSummary?.documents || []} onClose={() => setSourceField(null)} />
       <AddDocumentDialog caseId={caseId} nomineeNumber={addDocumentNominee} onClose={() => setAddDocumentNominee(null)} onDocumentsRead={() => session.reloadFields(true)} />
-      <RequiredFieldsDrawer session={session} sections={sections} isOpen={isRequiredDrawerOpen} onClose={() => setIsRequiredDrawerOpen(false)} onJumpToField={goToField} />
-      <BlockedFieldsDialog blockedFields={blockedFields} onClose={() => setBlockedFields([])} onJumpToField={(fieldKey) => { setBlockedFields([]); goToField(fieldKey); }} />
+      <SheetImportDialog caseId={caseId} formId={fieldsView.formId} isOpen={isSheetImportOpen} onClose={() => setIsSheetImportOpen(false)} onImported={() => session.reloadFields(false)} />
+      <RequiredFieldsDrawer session={session} sections={sections} isOpen={isRequiredDrawerOpen} onClose={() => setIsRequiredDrawerOpen(false)} onJumpToField={goToField} onChooseTick={handleChooseTick} />
+      <BlockedFieldsDialog blockedFields={blockedFields} getSectionLabel={getSectionLabel} onClose={() => setBlockedFields([])} onJumpToField={(fieldKey) => { setBlockedFields([]); goToField(fieldKey); }} />
+    </div>
+  );
+}
+
+/** Same three columns as the loaded page, so nothing jumps when the fields arrive. */
+function ReviewPageSkeleton() {
+  return (
+    <div className="grid h-full grid-cols-[12.5rem_minmax(0,0.95fr)_minmax(0,1.15fr)]" role="status" aria-label="Filling the form">
+      <div className="space-y-3 border-r border-line bg-white p-4">
+        <Skeleton className="h-4 w-32" /><Skeleton className="h-1.5 w-full" />
+        {Array.from({ length: 6 }, (_unused, index) => <Skeleton key={index} className="h-8 w-full" />)}
+      </div>
+      <div className="space-y-5 border-r border-line bg-white p-4"><Skeleton className="h-5 w-40" /><FieldSkeletonGrid /></div>
+      <div className="p-4"><Skeleton className="mx-auto aspect-[0.707] h-full bg-white" /><span className="sr-only">Filling the form…</span></div>
     </div>
   );
 }

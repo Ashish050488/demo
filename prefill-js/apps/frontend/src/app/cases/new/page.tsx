@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { createCase } from "@/api/cases-api";
 import { detectForm, fetchForms } from "@/api/forms-api";
 import CaseStepper from "@/components/cases/CaseStepper";
+import FormCard from "@/components/forms/FormCard";
 import Button from "@/components/ui/Button";
 import Notice from "@/components/ui/Notice";
 import PageContainer from "@/components/ui/PageContainer";
@@ -46,13 +47,7 @@ export default function NewCasePage() {
   return (
     <PageContainer title="Which form?" description="Pick the form, or upload its blank PDF and we recognise it." actions={<CaseStepper currentStep="form" />}>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {forms.map((form) => (
-          <button key={form.formId} type="button" disabled={isWorking} onClick={() => startCase(form.formId)}
-            className="rounded-xl border border-line bg-white p-5 text-left transition hover:border-brand-500 disabled:opacity-60">
-            <div className="font-semibold">{form.shortLabel}</div>
-            <div className="mt-1 text-xs text-muted">{form.label}</div>
-          </button>
-        ))}
+        {forms.map((form) => <FormCard key={form.formId} form={form} isDisabled={isWorking} onSelect={() => startCase(form.formId)} />)}
       </div>
       <div className="mt-5 flex items-center gap-3">
         <Button disabled={isWorking} onClick={() => blankFormInput.current?.click()}>Upload blank form (PDF)</Button>

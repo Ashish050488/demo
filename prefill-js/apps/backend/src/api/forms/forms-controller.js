@@ -6,6 +6,8 @@ import { detectFormId } from "../../services/forms/detect-form-service.js";
 import { buildFormMappingOverlay } from "../../services/forms/form-mapping-overlay-service.js";
 import { buildSheetColumns } from "../../services/sheets/sheet-columns-helpers.js";
 import { renderPage } from "../../services/pdf/render-page-service.js";
+import { buildBatchTemplate } from "../../services/batch/batch-template-service.js";
+import { buildBatchColumns } from "../../services/batch/batch-columns-helpers.js";
 
 const PAGE_IMAGE_WIDTH_PIXELS = 1400;
 const A4_WIDTH_POINTS = 595.28;
@@ -55,4 +57,15 @@ export async function handleGetBlankPageImage(request, response) {
   if (!Number.isInteger(pageNumber) || pageNumber < 1) throw new ApiError(400, ERROR_CODES.INVALID_REQUEST, "Bad page number");
   const { png } = await renderPage(request.formDefinition.formConfiguration.blankFormPath, pageNumber, { scale: PAGE_IMAGE_WIDTH_PIXELS / A4_WIDTH_POINTS });
   response.set("Content-Type", "image/png").set("Cache-Control", "no-store").send(png);
+}
+
+/** The Excel a client fills with one row per client, for this form. */
+export async function handleDownloadBatchTemplate(request, response) {
+  const { fileBytes, fileName } = await buildBatchTemplate(request.formDefinition.formId);
+  response.set("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    .set("Content-Disposition", `attachment; filename="${fileName}"`).send(fileBytes);
+}
+
+export async function handleGetBatchColumns(request, response) {
+  sendData(response, { columns: await buildBatchColumns(request.formDefinition.formId) });
 }

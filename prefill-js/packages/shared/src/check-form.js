@@ -17,7 +17,7 @@ export function checkForm(formRules, values) {
   const { tickboxField, numberField, optionByIdentityKind, numberFieldByIdentityKind } = formRules.identityType;
   const tickOnlyKeys = new Set([tickboxField, "relationship_option"]);
   const isNomineeInUse = (nomineeNumber) => nomineeNumber === 1 || Object.keys(values).some((fieldKey) =>
-    fieldKey.endsWith(`_n${nomineeNumber}`) && hasValue(fieldKey) && !tickOnlyKeys.has(fieldKey.replace(/_nd+$/, "")));
+    fieldKey.endsWith(`_n${nomineeNumber}`) && hasValue(fieldKey) && !tickOnlyKeys.has(fieldKey.replace(/_n\d+$/, "")));
   const nomineeFieldKeys = new Set(formRules.nomineeFieldKeys);
   const missing = [];
   const invalid = [];
@@ -38,8 +38,8 @@ export function checkForm(formRules, values) {
 
   for (const [fieldKey, fieldValue] of Object.entries(values)) {
     if (!hasValue(fieldKey)) continue;
-    const baseKey = fieldKey.replace(/_nd+$/, "");
-    const nomineeNumber = Number((fieldKey.match(/_n(d)$/) || [])[1]) || 1;
+    const baseKey = fieldKey.replace(/_n\d+$/, "");
+    const nomineeNumber = Number((fieldKey.match(/_n(\d)$/) || [])[1]) || 1;
     const check = baseKey === numberField
       ? validateIdNumberFor(getChosenIdType(formRules, values, nomineeNumber), fieldValue)
       : validatorFor(baseKey)?.(fieldValue);

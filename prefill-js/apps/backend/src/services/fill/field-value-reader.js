@@ -1,5 +1,7 @@
 // The per-field value lookup used by one fill run: where each mapped field's value comes from (today's date,
 // the nominee's document profile, or the case's typed values) and, when there is none, the plain reason why.
+import { getTypedPanValues } from "../documents/identity-number-memory-service.js";
+
 const IDENTITY_KIND_WORDS = { pan: "PAN card", aadhaarLast4: "Aadhaar", passport: "passport", dl: "driving licence" };
 const NOT_TYPED_REASON = "Not provided - type it here, or include it in the batch sheet";
 
@@ -7,7 +9,8 @@ export function createFieldValueReader({
   caseEntry, formRules, fieldSources, profiles, profileKeyByField, getIdentityKind, documentsOfNominee,
   formatTodayDate, onFlagged, checkValue,
 }) {
-  const typedValues = caseEntry.typedValues || {};
+  // Sheet values, with PAN values from memory (never stored on disk) on top.
+  const typedValues = { ...(caseEntry.typedValues || {}), ...getTypedPanValues(caseEntry.id) };
   const { numberField, optionByIdentityKind, numberFieldByIdentityKind } = formRules.identityType;
   const identityKindByNumberRow = Object.fromEntries(Object.entries(numberFieldByIdentityKind).map(([kind, row]) => [row, kind]));
 
@@ -45,15 +48,19 @@ export function createFieldValueReader({
     if (field.x == null) return { skipReason: "no mapped position" };
     const fieldSource = fieldSources[field.key];
     if (fieldSource === "today") return { value: formatTodayDate(), sourceFile: "today's date" };
-    if (typedValues[fieldLabel]) return { value: String(typedValues[fieldLabel]), sourceFile: "batch sheet" };
+    const sheetValue = typedValues[fieldLabel] ? { value: String(typedValues[fieldLabel]), sourceFile: "batch sheet" } : null;
     if (fieldSource && fieldSource.startsWith("document.") && field.nominee != null) {
+      // A value read from the person's own document wins; the sheet only fills what documents did not show.
       const documentValue = readDocumentField(field, field.nominee);
       if (documentValue.value != null) {
         const check = checkValue(field.key, field.nominee, documentValue.value);
         if (check && !check.valid) onFlagged(fieldLabel, check.reason);
+        return documentValue;
       }
+      if (sheetValue && !documentValue.notApplicable) return sheetValue;
       return documentValue;
     }
+    if (sheetValue) return sheetValue;
     if (!fieldSource) return { skipReason: "not mapped to a source yet" };
     return { skipReason: NOT_TYPED_REASON, notProvided: true };
   };

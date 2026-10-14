@@ -6,7 +6,7 @@ import {
   createCase, listCases, updateCase, deleteCase, getFillResultsPath, getFilledPdfPath, getRegeneratedPdfPath, getRegeneratedResultsPath,
 } from "../../services/storage/case-store-service.js";
 import { recordDecision, DECISION_KINDS } from "../../services/storage/decision-log-service.js";
-import { deleteIdentityRecord } from "../../services/documents/identity-number-memory-service.js";
+import { deleteIdentityRecord, deleteTypedPanValues } from "../../services/documents/identity-number-memory-service.js";
 import { fillCase } from "../../services/fill/fill-case-service.js";
 import { regenerateCasePdf } from "../../services/fill/regenerate-case-pdf-service.js";
 import { renderCasePreviewPage } from "../../services/fill/preview-case-page-service.js";
@@ -55,10 +55,14 @@ export async function handleRecordDecision(request, response) {
 
 /** Body: {field, value} -> PNG of that field's page with the value drawn in. Saves nothing. */
 export async function handlePreviewPage(request, response) {
-  const { field, value } = request.body || {};
-  if (!field) throw new ApiError(400, ERROR_CODES.INVALID_REQUEST, "Need field");
+  const { field, value, pageNumber } = request.body || {};
+  const requestedPageNumber = pageNumber == null ? null : Number(pageNumber);
+  if (!field && requestedPageNumber == null) throw new ApiError(400, ERROR_CODES.INVALID_REQUEST, "Need field or pageNumber");
+  if (requestedPageNumber != null && (!Number.isInteger(requestedPageNumber) || requestedPageNumber < 1)) {
+    throw new ApiError(400, ERROR_CODES.INVALID_REQUEST, "pageNumber must be a page of the form");
+  }
   const startedAtMilliseconds = Date.now();
-  const png = await renderCasePreviewPage(request.caseEntry, field, value);
+  const png = await renderCasePreviewPage(request.caseEntry, field, value, requestedPageNumber);
   if (!png) throw new ApiError(400, ERROR_CODES.INVALID_REQUEST, "This field has no position to preview");
   response.set("Content-Type", "image/png").set("Cache-Control", "no-store")
     .set("X-Preview-Milliseconds", String(Date.now() - startedAtMilliseconds)).send(png);
@@ -78,6 +82,7 @@ export async function handleDownloadPdf(request, response) {
 
 export async function handleDeleteCase(request, response) {
   for (const caseDocument of request.caseEntry.documents) deleteIdentityRecord(caseDocument.id);
+  deleteTypedPanValues(request.caseEntry.id);
   await deleteCase(request.caseEntry.id);
   sendData(response, { caseId: request.caseEntry.id });
 }

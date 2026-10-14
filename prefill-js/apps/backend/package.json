@@ -12,6 +12,7 @@
     "@gutenye/ocr-node": "^1.4.9",
     "@prefill/shared": "workspace:*",
     "canvas": "^3.2.3",
+    "exceljs": "^4.4.0",
     "express": "^5.3.0",
     "jsqr": "^1.4.0",
     "multer": "^2.4.0",

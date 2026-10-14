@@ -15,19 +15,22 @@ import { createBaselineValueReader, getEffectiveTickOption } from "./baseline-va
 const PREVIEW_IMAGE_WIDTH_PIXELS = 1400;
 const A4_WIDTH_POINTS = 595.28;
 
-/** PNG bytes of the page holding `editedField`, or null when that field has no position to preview. */
-export async function renderCasePreviewPage(caseEntry, editedField, editedValue) {
+/** PNG bytes of `requestedPageNumber` (any page the reviewer browses to), else of the page holding `editedField`.
+ * The edited field (if any) is drawn with its typed value either way. Null when there is nothing to show. */
+export async function renderCasePreviewPage(caseEntry, editedField, editedValue, requestedPageNumber = null) {
   const { formConfiguration } = getFormDefinition(caseEntry.formId);
   const baselineRecords = JSON.parse(await readFile(getFillResultsPath(caseEntry.id), "utf-8"));
-  const editedRecord = baselineRecords.find((baselineRecord) => baselineRecord.field === editedField);
-  const isTickboxEdit = editedRecord && "option_chosen" in editedRecord;
-  const previewPageNumber = editedRecord?.page ?? (isTickboxEdit ? getTickboxPage(formConfiguration, editedField) : null);
-  if (!editedRecord || previewPageNumber == null) return null;
+  const editedRecord = editedField ? baselineRecords.find((baselineRecord) => baselineRecord.field === editedField) : null;
+  const isTickboxEdit = Boolean(editedRecord && "option_chosen" in editedRecord);
+  const previewPageNumber = requestedPageNumber
+    ?? editedRecord?.page ?? (isTickboxEdit ? getTickboxPage(formConfiguration, editedField) : null);
+  if (previewPageNumber == null) return null;
 
   const latestDecisions = await fetchLatestDecisionsByField(caseEntry.id);
-  const textEdit = isTickboxEdit ? {} : { editedField, editedValue };
+  const textEdit = isTickboxEdit || !editedRecord ? {} : { editedField, editedValue };
   const { pdfDoc, pages } = await fillTextFields(formConfiguration, await fetchFieldPositions(caseEntry.formId),
     createBaselineValueReader(baselineRecords, latestDecisions, textEdit));
+  if (previewPageNumber > pages.length) return null; // a page this form doesn't have
   for (const baselineRecord of baselineRecords) {
     if (!("option_chosen" in baselineRecord)) continue;
     const chosenOption = getEffectiveTickOption(baselineRecord, latestDecisions, { editedField, editedValue });

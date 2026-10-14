@@ -3,6 +3,8 @@ import { formatFieldLabel } from "@prefill/shared";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { fetchFieldSources } from "@/api/forms-api";
+import { FieldSkeletonGrid } from "@/components/ui/Skeleton";
+import StatusState from "@/components/ui/StatusState";
 import type { FieldSources } from "@/types/forms";
 
 const SOURCE_WORDS: Record<string, string> = { typed: "Typed here or from a batch sheet", today: "Today's date", tick: "Tick box - by rule or by you" };
@@ -11,8 +13,11 @@ const SOURCE_WORDS: Record<string, string> = { typed: "Typed here or from a batc
 export default function FieldMappingPane({ formId, onSelectField }: { formId: string; onSelectField: (fieldKey: string) => void }) {
   const [fieldSources, setFieldSources] = useState<FieldSources | null>(null);
   const [filterText, setFilterText] = useState("");
-  useEffect(() => { fetchFieldSources(formId).then(setFieldSources).catch(() => setFieldSources(null)); }, [formId]);
-  if (!fieldSources) return <p className="p-6 text-sm text-muted">Loading mapping…</p>;
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  useEffect(() => { setLoadError(null); fetchFieldSources(formId).then(setFieldSources).catch((error: Error) => setLoadError(error.message)); }, [formId, retryCount]);
+  if (loadError) return <StatusState tone="error" title="Mapping could not load" message={loadError} actionLabel="Try again" onAction={() => setRetryCount((count) => count + 1)} />;
+  if (!fieldSources) return <div className="p-4"><FieldSkeletonGrid fieldCount={8} /></div>;
 
   const normalizedFilter = filterText.trim().toLowerCase();
   const sourceRows = Object.entries(fieldSources.fieldSources)
@@ -24,6 +29,7 @@ export default function FieldMappingPane({ formId, onSelectField }: { formId: st
           className="h-8 flex-1 rounded-lg border border-line px-3 text-sm outline-none focus:border-brand-500" />
         <Link href={`/forms/${formId}`} target="_blank" className="text-xs text-brand-600 hover:underline">Positions on the form ↗</Link>
       </div>
+      {sourceRows.length ? null : <StatusState title="No field matches" message={`Nothing matches "${filterText}".`} actionLabel="Clear filter" onAction={() => setFilterText("")} />}
       <ul className="flex-1 divide-y divide-line overflow-auto">
         {sourceRows.map(([fieldKey, fieldSource]) => {
           const documentKey = /^document\.(\w+)$/.exec(fieldSource)?.[1];

@@ -29,7 +29,8 @@ export function validateDob(value) {
 }
 
 export function validateLast4(value) {
-  const v = clean(value).toUpperCase();
+  // The screen shows a stored last 4 as "XXXX XXXX 1234" - that masked form is the same valid value.
+  const v = clean(value).toUpperCase().replace(/^X{4}\s*X{4}\s*/, "");
   if (PAN_RE.test(v)) return bad("That's a PAN number - this box is for the last 4 digits of Aadhaar");
   if (/^\d{12}$/.test(v.replace(/\s/g, ""))) return bad("Enter only the LAST 4 digits of Aadhaar, never the full number");
   return /^\d{4}$/.test(v) ? ok : bad("Must be exactly 4 digits (last 4 of Aadhaar)");

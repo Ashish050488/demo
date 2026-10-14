@@ -4,6 +4,7 @@ import type { ReviewSession } from "@/hooks/useReviewSession";
 import type { CaseField } from "@/types/cases";
 import { getEffectiveValue, getFieldState } from "@/utils/review-field-helpers";
 import type { ReviewSection } from "@/utils/review-sections";
+import Tabs from "@/components/ui/Tabs";
 import FieldCell from "./FieldCell";
 
 interface SectionFieldsProps {
@@ -43,22 +44,17 @@ export default function SectionFields(props: SectionFieldsProps) {
   return (
     <div>
       {section.isNomineeSection ? (
-        <div className="mb-4 flex items-center gap-1 border-b border-line">
-          {Array.from({ length: shownNomineeCount }, (_unused, index) => index + 1).map((nomineeNumber) => {
-            const hasProblem = section.fields.some((caseField) => getNomineeNumber(caseField.field) === nomineeNumber && problemKeys.has(caseField.field));
-            const isActive = nomineeNumber === activeNomineeNumber;
-            return (
-              <button key={nomineeNumber} type="button" onClick={() => onSelectNominee(nomineeNumber)}
-                className={`-mb-px flex items-center gap-1.5 border-b-2 px-3 py-1.5 text-[13px] ${isActive ? "border-brand-500 font-semibold text-ink" : "border-transparent text-muted hover:text-ink"}`}>
-                Nominee {nomineeNumber}{hasProblem ? <span className="h-1.5 w-1.5 rounded-full bg-red-500" /> : null}
+        <div className="mb-4">
+          <Tabs activeKey={activeNomineeNumber} onChange={onSelectNominee}
+            tabs={Array.from({ length: shownNomineeCount }, (_unused, index) => index + 1).map((nomineeNumber) => ({
+              key: nomineeNumber, label: `Nominee ${nomineeNumber}`,
+              hasAlert: section.fields.some((caseField) => getNomineeNumber(caseField.field) === nomineeNumber && problemKeys.has(caseField.field)),
+            }))}
+            trailingAction={shownNomineeCount < nomineeCount ? (
+              <button type="button" onClick={() => onSelectNominee(shownNomineeCount + 1)} className="px-3 py-1.5 text-[13px] text-brand-600 hover:text-brand-700">
+                + Add nominee {shownNomineeCount + 1}
               </button>
-            );
-          })}
-          {shownNomineeCount < nomineeCount ? (
-            <button type="button" onClick={() => onSelectNominee(shownNomineeCount + 1)} className="px-3 py-1.5 text-[13px] text-brand-600 hover:text-brand-700">
-              + Add nominee {shownNomineeCount + 1}
-            </button>
-          ) : null}
+            ) : null} />
         </div>
       ) : null}
       <div className="grid gap-x-4 gap-y-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(13rem, 1fr))" }}>

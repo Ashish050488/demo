@@ -25,6 +25,8 @@ formsRouter.put("/:formId/required-fields", requireFormMiddleware, formsControll
 formsRouter.get("/:formId/field-sources", requireFormMiddleware, formsController.handleGetFieldSources);
 formsRouter.get("/:formId/mapping", requireFormMiddleware, formsController.handleGetFormMapping);
 formsRouter.get("/:formId/sheet-columns", requireFormMiddleware, formsController.handleGetSheetColumns);
+formsRouter.get("/:formId/batch-template", requireFormMiddleware, formsController.handleDownloadBatchTemplate);
+formsRouter.get("/:formId/batch-columns", requireFormMiddleware, formsController.handleGetBatchColumns);
 formsRouter.get("/:formId/pages/:pageNumber", requireFormMiddleware, formsController.handleGetBlankPageImage);
 
 export default formsRouter;

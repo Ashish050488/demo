@@ -1,10 +1,10 @@
 "use client";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { fetchFormMapping, fetchFormRules, updateRequiredFields } from "@/api/forms-api";
+import { fetchFormMapping, fetchFormRules, getBatchTemplateUrl, updateRequiredFields } from "@/api/forms-api";
 import BlankFormOverlay from "@/components/forms/BlankFormOverlay";
 import RequiredFieldsEditor from "@/components/forms/RequiredFieldsEditor";
-import Button from "@/components/ui/Button";
+import Button, { ButtonLink } from "@/components/ui/Button";
 import Notice from "@/components/ui/Notice";
 import type { FormMapping } from "@/types/forms";
 
@@ -54,6 +54,7 @@ export default function FormSetupPage() {
         </div>
         <div className="ml-auto flex items-center gap-3">
           {statusMessage ? <span className={`text-xs ${statusMessage.tone === "error" ? "text-red-700" : "text-brand-700"}`}>{statusMessage.text}</span> : null}
+          <ButtonLink href={getBatchTemplateUrl(formId)} isExternal>Download Excel template</ButtonLink>
           <Button variant="primary" disabled={!hasChanges} onClick={handleSave}>Save required fields</Button>
         </div>
       </div>

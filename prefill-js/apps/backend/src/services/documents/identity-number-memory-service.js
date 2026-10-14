@@ -14,3 +14,19 @@ export function getIdentityRecord(documentId) {
 export function deleteIdentityRecord(documentId) {
   identityRecordsByDocumentId.delete(documentId);
 }
+
+// PAN values typed into a batch / import sheet, per case - same rule as PAN read from a card: memory only.
+const typedPanValuesByCaseId = new Map(); // caseId -> { fieldKey: PAN }
+
+export function storeTypedPanValues(caseId, panValues) {
+  if (Object.keys(panValues).length) typedPanValuesByCaseId.set(caseId, { ...panValues });
+  else typedPanValuesByCaseId.delete(caseId);
+}
+
+export function getTypedPanValues(caseId) {
+  return typedPanValuesByCaseId.get(caseId) || {};
+}
+
+export function deleteTypedPanValues(caseId) {
+  typedPanValuesByCaseId.delete(caseId);
+}

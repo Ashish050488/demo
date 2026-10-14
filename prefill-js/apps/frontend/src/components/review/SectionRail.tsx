@@ -1,4 +1,5 @@
 "use client";
+import Badge from "@/components/ui/Badge";
 import type { ReviewSection } from "@/utils/review-sections";
 
 interface SectionRailProps {
@@ -21,10 +22,9 @@ export default function SectionRail({ sections, activeSectionKey, problemFieldKe
         return (
           <button key={section.key} type="button" onClick={() => onSelectSection(section.key)}
             className={`flex items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[13px] transition ${isActive ? "bg-ink text-white" : "text-ink hover:bg-canvas"}`}>
-            <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-full text-[10px] font-semibold ${
-              problemCount ? "bg-red-500 text-white" : isComplete ? "bg-emerald-600 text-white" : isActive ? "bg-white/20" : "bg-canvas text-muted"}`}>
+            <Badge isRound tone={problemCount ? "danger" : isComplete ? "success" : isActive ? "inverse" : "neutral"}>
               {problemCount ? problemCount : isComplete ? "✓" : index + 1}
-            </span>
+            </Badge>
             <span className="min-w-0 flex-1 truncate">{section.label}</span>
             <span className={`text-[11px] ${isActive ? "text-white/70" : "text-muted"}`}>{filledCount}/{section.fields.length}</span>
           </button>

@@ -12,6 +12,7 @@ import { getFilledPdfPath, getFillResultsPath } from "../storage/case-store-serv
 import { fetchCorrectedValues } from "../storage/decision-log-service.js";
 import { buildNomineeProfile, IDENTITY_KIND_PRIORITY } from "../profile/build-nominee-profile-service.js";
 import { rereadMissingIdentityDocuments } from "../documents/read-identity-document-service.js";
+import { getTypedPanValues } from "../documents/identity-number-memory-service.js";
 import { createFieldValueReader } from "./field-value-reader.js";
 
 export function formatTodayDate() {
@@ -34,7 +35,7 @@ export async function fillCase(caseEntry) {
   if (!formDefinition) throw new Error(`unsupported form "${caseEntry.formId}"`);
   const [fieldPositions, fieldSources, formRules] = await Promise.all([
     fetchFieldPositions(caseEntry.formId), fetchFieldSources(caseEntry.formId), fetchFormRules(caseEntry.formId)]);
-  const overrides = { ...(caseEntry.typedValues || {}), ...(await fetchCorrectedValues(caseEntry.id)) };
+  const overrides = { ...(caseEntry.typedValues || {}), ...getTypedPanValues(caseEntry.id), ...(await fetchCorrectedValues(caseEntry.id)) };
 
   await rereadMissingIdentityDocuments(caseEntry);
   const nomineeNumbers = Array.from({ length: formRules.supportedNomineeCount }, (_unused, index) => index + 1);
@@ -47,7 +48,11 @@ export async function fillCase(caseEntry) {
   const getIdentityKind = (nomineeNumber) => {
     const pickedOption = overrides[scope === "shared" ? tickboxField : `${tickboxField}_n${nomineeNumber}`];
     if (pickedOption && identityKindByOption[pickedOption]) return identityKindByOption[pickedOption];
-    return IDENTITY_KIND_PRIORITY.find((kind) => profiles[nomineeNumber]?.[kind]) || null;
+    const kindFromDocuments = IDENTITY_KIND_PRIORITY.find((kind) => profiles[nomineeNumber]?.[kind]);
+    if (kindFromDocuments) return kindFromDocuments;
+    // No ID document: follow whichever ID number row the sheet filled for this nominee.
+    const { numberFieldByIdentityKind } = formRules.identityType;
+    return IDENTITY_KIND_PRIORITY.find((kind) => numberFieldByIdentityKind[kind] && overrides[`${numberFieldByIdentityKind[kind]}_n${nomineeNumber}`]) || null;
   };
   const idTypes = {};
   for (const nomineeNumber of nomineeNumbers) {

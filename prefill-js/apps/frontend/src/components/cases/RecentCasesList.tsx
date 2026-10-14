@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { fetchCases } from "@/api/cases-api";
 import { fetchForms } from "@/api/forms-api";
 import type { CaseSummary } from "@/types/cases";
+import Badge from "@/components/ui/Badge";
 import { formatDateTime } from "@/utils/format-date";
 
 const MAXIMUM_RECENT_CASES = 50;
@@ -33,9 +34,9 @@ export default function RecentCasesList() {
               <span className="font-medium">{formLabels[caseSummary.formId] || caseSummary.formId}</span>
               <span className="text-muted">{caseSummary.documents.length} document{caseSummary.documents.length === 1 ? "" : "s"}</span>
               <span className="ml-auto text-xs text-muted">{formatDateTime(caseSummary.createdAt)}</span>
-              <span className={`rounded-full px-2 py-0.5 text-xs ${caseSummary.confirmedAt ? "bg-brand-50 text-brand-700" : "bg-canvas text-muted"}`}>
+              <Badge isSoft tone={caseSummary.confirmedAt ? "success" : "neutral"}>
                 {caseSummary.confirmedAt ? "Saved" : caseSummary.isFilled ? "In review" : "Documents"}
-              </span>
+              </Badge>
             </Link>
           </li>
         ))}

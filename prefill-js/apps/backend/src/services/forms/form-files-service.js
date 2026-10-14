@@ -36,8 +36,8 @@ export async function fetchFormRules(formId) {
 
 export async function listForms() {
   return Promise.all(listFormIds().map(async (formId) => {
-    const { label, shortLabel } = await readFormJson(formId, "form-rules.json");
-    return { formId, label, shortLabel };
+    const { label, shortLabel, purpose, blankFileName, keyFields, supportedNomineeCount } = await readFormJson(formId, "form-rules.json");
+    return { formId, label, shortLabel, purpose, blankFileName, keyFields, supportedNomineeCount };
   }));
 }
 

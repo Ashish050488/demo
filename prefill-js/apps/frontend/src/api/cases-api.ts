@@ -1,4 +1,4 @@
-import type { CaseFieldsView, CaseSummary, ConfirmResult, FieldDecision, UploadResult } from "@/types/cases";
+import type { CaseFieldsView, CaseSummary, ConfirmResult, FieldDecision, SheetImportResult, UploadResult } from "@/types/cases";
 import { buildApiUrl, requestJson, sendJson } from "./http-client";
 
 export const fetchCases = () => requestJson<{ cases: CaseSummary[] }>("/cases").then((response) => response.cases);
@@ -28,11 +28,19 @@ export const removeDocument = (caseId: string, documentId: string) => sendJson(`
 export const confirmCase = (caseId: string, fieldValues: Record<string, string>) =>
   sendJson<ConfirmResult>(`/cases/${caseId}/confirm`, "POST", { fieldValues });
 
-/** PNG blob of the field's page with `value` drawn in (nothing saved). */
-export async function fetchPreviewImage(caseId: string, field: string, value: string): Promise<Blob> {
+/** PNG blob of the field's page (or of `pageNumber`) with `value` drawn in (nothing saved). */
+export async function fetchPreviewImage(caseId: string, field: string | null, value: string, pageNumber?: number | null): Promise<Blob> {
   const response = await fetch(buildApiUrl(`/cases/${caseId}/preview`), {
-    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ field, value }),
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ field, value, pageNumber: pageNumber ?? undefined }),
   });
   if (!response.ok) throw new Error("Preview failed");
   return response.blob();
+}
+
+/** Fill this case from one row of an Excel/CSV. Without rowNumber, a file with several clients returns the rows to pick from. */
+export function importCaseSheet(caseId: string, sheetFile: File, rowNumber?: number) {
+  const formData = new FormData();
+  formData.append("file", sheetFile);
+  if (rowNumber) formData.append("rowNumber", String(rowNumber));
+  return requestJson<SheetImportResult>(`/cases/${caseId}/sheet-import`, { method: "POST", body: formData });
 }

@@ -1,8 +1,16 @@
 {
   "_about": "Form-level rules: how the form is recognised, which tab it saves to, and how its ID-type tick box works. Required fields are in required-fields.json (editable from the app).",
   "formId": "crn-broking-demat",
-  "label": "CRN Broking & Demat — Nomination",
-  "shortLabel": "CRN Broking & Demat",
+  "label": "Modification in Nomination in CRN Broking Demat",
+  "shortLabel": "Modification in Nomination in CRN Broking Demat",
+  "purpose": "Add or change nominees on a broking / demat account",
+  "blankFileName": "Modification in Nomination in CRN Broking Demat.pdf",
+  "keyFields": [
+    "Broking Code",
+    "DP ID",
+    "Client ID",
+    "CRN"
+  ],
   "sheetTabName": "CRN Broking & Demat",
   "detectionPhrases": [
     "FORM FOR NOMINATION",

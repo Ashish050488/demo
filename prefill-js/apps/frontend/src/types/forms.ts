@@ -2,8 +2,13 @@ export type { FormRules } from "@prefill/shared";
 
 export interface FormSummary {
   formId: string;
+  /** The form's own printed title, e.g. "Nomination Form — Mutual Fund (CAMS)". */
   label: string;
   shortLabel: string;
+  purpose: string;
+  blankFileName: string;
+  keyFields: string[];
+  supportedNomineeCount: number;
 }
 
 export interface FormMappingItem {

@@ -72,3 +72,29 @@ export interface ConfirmResult {
   sheetRowNumber: number;
   areScansDeleted: boolean;
 }
+
+export interface SheetRowSummary {
+  rowNumber: number;
+  clientReference: string | null;
+  displayName: string | null;
+  filledCount: number;
+}
+
+export interface SheetImportResult {
+  needsRowChoice: boolean;
+  sheetName: string;
+  sheetRows?: SheetRowSummary[];
+  rowNumber?: number;
+  clientReference?: string | null;
+  appliedFieldCount?: number;
+  panFieldsKeptInMemory?: string[];
+  unknownHeadings?: string[];
+  duplicateFields?: string[];
+  documentWins?: { field: string; sheetValue: string; documentValue: string; documentLabel: string }[];
+  keptCorrections?: string[];
+  invalidValues?: { field: string; value: string; reason: string }[];
+  unmatchedOptions?: { field: string; value: string; allowed: string[] }[];
+  mappedToOthers?: { field: string; value: string }[];
+  aadhaarCutToLast4?: string[];
+  cellWarnings?: { field: string; warning: string }[];
+}

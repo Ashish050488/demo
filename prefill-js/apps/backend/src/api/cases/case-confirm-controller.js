@@ -5,7 +5,7 @@ import { checkForm } from "@prefill/shared";
 import { sendData, ApiError, ERROR_CODES } from "../../helpers/api-response-helpers.js";
 import { fetchFormRules } from "../../services/forms/form-files-service.js";
 import { updateCase, getCaseUploadDirectory } from "../../services/storage/case-store-service.js";
-import { deleteIdentityRecord } from "../../services/documents/identity-number-memory-service.js";
+import { deleteIdentityRecord, deleteTypedPanValues } from "../../services/documents/identity-number-memory-service.js";
 import { removeNeverStoredFields } from "../../services/sheets/privacy-filter-helpers.js";
 import { saveCaseToSheet, SHEET_ERROR_CODES } from "../../services/sheets/google-sheet-service.js";
 
@@ -29,6 +29,7 @@ export async function handleConfirmCase(request, response) {
   }
   await rm(getCaseUploadDirectory(caseEntry.id), { recursive: true, force: true });
   for (const caseDocument of caseEntry.documents) deleteIdentityRecord(caseDocument.id);
+  deleteTypedPanValues(caseEntry.id);
   const confirmedAt = new Date().toISOString();
   await updateCase(caseEntry.id, { confirmedAt, scansDeletedAt: confirmedAt });
   sendData(response, {
