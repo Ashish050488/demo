@@ -30,7 +30,7 @@ export default function CaseConfirmPage() {
     (async () => {
       try {
         const fieldsView = await fetchCaseFields(caseId);
-        const shownFields = fieldsView.fields.filter((caseField) => caseField.status !== "not_applicable" && !/_n3$/.test(caseField.field));
+        const shownFields = fieldsView.fields.filter((caseField) => caseField.status !== "not_applicable");
         setFieldValues(collectEffectiveValues(shownFields, new Map()));
         const sheetColumns = await fetchSheetColumns(fieldsView.formId);
         setColumnLabels(Object.fromEntries(sheetColumns.map((sheetColumn) => [sheetColumn.key, sheetColumn.label])));
@@ -56,11 +56,16 @@ export default function CaseConfirmPage() {
 
   const fieldEntries = Object.entries(fieldValues);
   return (
-    <PageContainer>
-      <CaseStepper currentStep="confirm" caseId={caseId} />
-      <h1 className="mt-6 text-2xl font-semibold tracking-tight">Save to Google Sheet</h1>
-      <p className="mt-2 text-sm text-muted">One tab per form, one row per case. Aadhaar is saved as the last 4 digits only; PAN numbers are never sent. Saving deletes the uploaded scans from this machine.</p>
-      <div className="mt-6 space-y-4">
+    <PageContainer title="Save to Google Sheet"
+      description="One tab per form, one row per case. Aadhaar last 4 digits only; PAN never sent. Saving deletes the uploaded scans from this machine."
+      actions={<>
+        <CaseStepper currentStep="confirm" caseId={caseId} />
+        {!confirmResult ? <>
+          <ButtonLink href={`/cases/${caseId}/review`}>← Back to review</ButtonLink>
+          <Button variant="primary" disabled={isSaving || !sheetSettings?.isConnected} onClick={handleSave}>{isSaving ? "Saving…" : "Save to Google Sheet"}</Button>
+        </> : null}
+      </>}>
+      <div className="space-y-4">
         {sheetSettings && !confirmResult ? <SheetConnectionBox sheetSettings={sheetSettings} onSettingsChange={setSheetSettings} /> : null}
         {confirmResult ? (
           <Notice tone="success">
@@ -73,21 +78,15 @@ export default function CaseConfirmPage() {
           </Notice>
         ) : null}
         {errorMessage ? <Notice tone="error">{errorMessage}</Notice> : null}
-        <Card className="divide-y divide-line">
+        <Card className="grid gap-px overflow-hidden bg-line sm:grid-cols-2 xl:grid-cols-3">
           {fieldEntries.map(([fieldKey, fieldValue]) => (
-            <div key={fieldKey} className="flex items-center gap-4 px-4 py-2 text-sm">
-              <span className="w-1/2 text-muted">{columnLabels[fieldKey] || formatFieldLabel(fieldKey)}</span>
-              {isNeverStored(fieldKey, fieldValue) ? <span className="text-xs text-muted">PAN - not stored</span> : <span className="truncate">{fieldValue}</span>}
+            <div key={fieldKey} className="min-w-0 bg-white px-4 py-2">
+              <div className="truncate text-[11px] text-muted">{columnLabels[fieldKey] || formatFieldLabel(fieldKey)}</div>
+              {isNeverStored(fieldKey, fieldValue) ? <div className="text-xs text-muted">PAN - not stored</div> : <div className="truncate text-sm" title={fieldValue}>{fieldValue}</div>}
             </div>
           ))}
         </Card>
       </div>
-      {!confirmResult ? (
-        <div className="mt-6 flex justify-between">
-          <ButtonLink href={`/cases/${caseId}/review`}>← Back to review</ButtonLink>
-          <Button variant="primary" disabled={isSaving || !sheetSettings?.isConnected} onClick={handleSave}>{isSaving ? "Saving…" : "Save to Google Sheet"}</Button>
-        </div>
-      ) : null}
     </PageContainer>
   );
 }

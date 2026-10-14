@@ -27,7 +27,7 @@ export function getReviewSection(fieldKey: string): ReviewSection {
   return /^guardian/.test(fieldKey) ? "Guardian" : "Account & form";
 }
 
-/** Fields for nominees the form supports (nominee 3 is not shown yet). */
+/** Fields for nominees the form supports (form-rules.json supportedNomineeCount). */
 export function isShownField(caseField: CaseField, formRules: FormRules): boolean {
   const nomineeNumber = getNomineeNumber(caseField.field);
   return !nomineeNumber || nomineeNumber <= formRules.supportedNomineeCount;

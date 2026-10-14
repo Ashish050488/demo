@@ -84,7 +84,7 @@ export function applyCamsNominationTickboxes(pages, formConfiguration, { idTypes
 
   const relationshipTickbox = formConfiguration.tickboxes.find((tickbox) => tickbox.key === "relationship_option");
   const idTypeTickbox = formConfiguration.tickboxes.find((tickbox) => tickbox.key === "id_type");
-  for (const columnNumber of [1, 2]) {
+  for (let columnNumber = 1; columnNumber <= relationshipTickbox.optionXByColumn.length; columnNumber += 1) {
     const relationshipField = `relationship_option_n${columnNumber}`;
     const chosenRelationship = overrides[relationshipField];
     if (chosenRelationship && relationshipTickbox.optionY[chosenRelationship] != null) {

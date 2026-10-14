@@ -11,6 +11,8 @@ export interface FormRules {
   detectionPhrases: string[];
   supportedNomineeCount: number;
   requiredFields: string[];
+  /** How the review screen splits the form: base field keys per section, in printed order. */
+  reviewSections: { key: string; label: string; fields: string[] }[];
   nomineeFieldKeys: string[];
   identityType: {
     scope: "shared" | "perNominee";

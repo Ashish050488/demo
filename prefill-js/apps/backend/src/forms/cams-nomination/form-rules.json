@@ -4,13 +4,84 @@
   "label": "CAMS Mutual Fund — Nomination",
   "shortLabel": "CAMS Mutual Fund",
   "sheetTabName": "CAMS Mutual Fund",
-  "detectionPhrases": ["Nomination Form", "Applicable for Individual Unitholders"],
-  "supportedNomineeCount": 2,
+  "detectionPhrases": [
+    "Nomination Form",
+    "Applicable for Individual Unitholders"
+  ],
+  "supportedNomineeCount": 3,
   "identityType": {
     "scope": "perNominee",
     "tickboxField": "id_type",
     "numberField": null,
-    "optionByIdentityKind": { "pan": "PAN", "aadhaarLast4": "Aadhaar (masked last 4 digits)", "passport": "Passport", "dl": "Driving License" },
-    "numberFieldByIdentityKind": { "pan": "id_pan", "aadhaarLast4": "id_details", "passport": "id_passport", "dl": "id_dl" }
-  }
+    "optionByIdentityKind": {
+      "pan": "PAN",
+      "aadhaarLast4": "Aadhaar (masked last 4 digits)",
+      "passport": "Passport",
+      "dl": "Driving License"
+    },
+    "numberFieldByIdentityKind": {
+      "pan": "id_pan",
+      "aadhaarLast4": "id_details",
+      "passport": "id_passport",
+      "dl": "id_dl"
+    }
+  },
+  "reviewSections": [
+    {
+      "key": "account",
+      "label": "Fund & investor",
+      "fields": [
+        "fund_name",
+        "folio_no",
+        "investor_name"
+      ]
+    },
+    {
+      "key": "nominee-identity",
+      "label": "Nominee details",
+      "fields": [
+        "name",
+        "share_pct",
+        "dob",
+        "relationship_option",
+        "relationship_other"
+      ]
+    },
+    {
+      "key": "nominee-id",
+      "label": "Nominee ID proof",
+      "fields": [
+        "id_type",
+        "id_pan",
+        "id_details",
+        "id_passport",
+        "id_dl"
+      ]
+    },
+    {
+      "key": "nominee-address",
+      "label": "Nominee address",
+      "fields": [
+        "address",
+        "city",
+        "state_country",
+        "pincode"
+      ]
+    },
+    {
+      "key": "nominee-contact",
+      "label": "Nominee contact",
+      "fields": [
+        "mobile",
+        "email"
+      ]
+    },
+    {
+      "key": "guardian",
+      "label": "Guardian (minor nominee)",
+      "fields": [
+        "guardian_name"
+      ]
+    }
+  ]
 }

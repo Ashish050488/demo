@@ -44,11 +44,8 @@ export default function NewCasePage() {
   }
 
   return (
-    <PageContainer>
-      <CaseStepper currentStep="form" />
-      <h1 className="mt-6 text-2xl font-semibold tracking-tight">Which form?</h1>
-      <p className="mt-2 text-sm text-muted">Pick the form, or upload its blank PDF and we recognise it.</p>
-      <div className="mt-6 grid gap-3 sm:grid-cols-2">
+    <PageContainer title="Which form?" description="Pick the form, or upload its blank PDF and we recognise it." actions={<CaseStepper currentStep="form" />}>
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {forms.map((form) => (
           <button key={form.formId} type="button" disabled={isWorking} onClick={() => startCase(form.formId)}
             className="rounded-xl border border-line bg-white p-5 text-left transition hover:border-brand-500 disabled:opacity-60">
@@ -57,7 +54,7 @@ export default function NewCasePage() {
           </button>
         ))}
       </div>
-      <div className="mt-6 flex items-center gap-3">
+      <div className="mt-5 flex items-center gap-3">
         <Button disabled={isWorking} onClick={() => blankFormInput.current?.click()}>Upload blank form (PDF)</Button>
         <span className="text-xs text-muted">Only its printed title is read; the file is not saved.</span>
         <input ref={blankFormInput} type="file" accept="application/pdf" hidden

@@ -41,25 +41,32 @@ export default function CaseDocumentsPage() {
   const caseDocuments = caseSummary?.documents || [];
   const hasReadDocument = caseDocuments.some((caseDocument) => caseDocument.status === "done");
   return (
-    <PageContainer>
-      <CaseStepper currentStep="documents" caseId={caseId} />
-      <h1 className="mt-6 text-2xl font-semibold tracking-tight">Upload documents</h1>
-      <p className="mt-2 text-sm text-muted">Drop everything you have for each nominee. Each file is read, matched to a nominee by name, and used to fill the form.</p>
-      {loadError ? <div className="mt-4"><Notice tone="error">{loadError}</Notice></div> : null}
-      <div className="mt-6"><DocumentDropZone onFilesChosen={handleFilesChosen} /></div>
-      {uploadMessages.length ? <div className="mt-4"><Notice tone="error">{uploadMessages.map((message) => <div key={message}>{message}</div>)}</Notice></div> : null}
-      <div className="mt-6 space-y-2">
-        {caseDocuments.map((caseDocument) => (
-          <DocumentCard key={caseDocument.id} caseDocument={caseDocument}
-            onAssign={async (nomineeNumber) => { await assignDocument(caseId, caseDocument.id, nomineeNumber); await reloadCase(); }}
-            onRemove={async () => { await removeDocument(caseId, caseDocument.id); await reloadCase(); }} />
-        ))}
-      </div>
-      <div className="mt-8 flex items-center justify-end gap-3">
-        {isAnyDocumentProcessing ? <span className="text-xs text-muted">Waiting for documents to finish reading…</span> : null}
+    <PageContainer title="Upload documents"
+      description="Drop everything you have for each nominee. Each file is read, matched to a nominee by name, and used to fill the form."
+      actions={<>
+        <CaseStepper currentStep="documents" caseId={caseId} />
+        {isAnyDocumentProcessing ? <span className="text-xs text-muted">Reading documents…</span> : null}
         <Button variant="primary" disabled={!hasReadDocument || isAnyDocumentProcessing || isFilling} onClick={handleContinue}>
           {isFilling ? "Filling the form…" : "Continue to review →"}
         </Button>
+      </>}>
+      <div className="grid h-full gap-5 lg:grid-cols-[minmax(320px,1fr)_minmax(0,2fr)]">
+        <div className="space-y-4">
+          <DocumentDropZone onFilesChosen={handleFilesChosen} />
+          {loadError ? <Notice tone="error">{loadError}</Notice> : null}
+          {uploadMessages.length ? <Notice tone="error">{uploadMessages.map((message) => <div key={message}>{message}</div>)}</Notice> : null}
+        </div>
+        <section className="flex min-h-0 flex-col rounded-xl border border-line bg-white">
+          <h2 className="border-b border-line px-4 py-2.5 text-sm font-semibold">Documents <span className="font-normal text-muted">({caseDocuments.length})</span></h2>
+          <div className="min-h-0 flex-1 space-y-2 overflow-auto p-3">
+            {!caseDocuments.length ? <p className="p-6 text-center text-sm text-muted">No documents yet - drop them on the left.</p> : null}
+            {caseDocuments.map((caseDocument) => (
+              <DocumentCard key={caseDocument.id} caseDocument={caseDocument}
+                onAssign={async (nomineeNumber) => { await assignDocument(caseId, caseDocument.id, nomineeNumber); await reloadCase(); }}
+                onRemove={async () => { await removeDocument(caseId, caseDocument.id); await reloadCase(); }} />
+            ))}
+          </div>
+        </section>
       </div>
     </PageContainer>
   );

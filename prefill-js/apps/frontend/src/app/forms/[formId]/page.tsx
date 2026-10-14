@@ -46,7 +46,7 @@ export default function FormSetupPage() {
   const hasChanges = savedRequiredFields.length !== requiredFields.size || savedRequiredFields.some((fieldKey) => !requiredFields.has(fieldKey));
   if (!formMapping) return <p className="p-8 text-center text-sm text-muted">{statusMessage?.text || "Loading…"}</p>;
   return (
-    <div className="flex h-[calc(100vh-3.5rem)] flex-col">
+    <div className="flex h-full flex-col">
       <div className="flex items-center gap-4 border-b border-line bg-white px-4 py-2.5">
         <div>
           <div className="text-sm font-semibold">{formMapping.label}</div>

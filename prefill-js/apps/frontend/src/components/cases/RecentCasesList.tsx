@@ -6,7 +6,7 @@ import { fetchForms } from "@/api/forms-api";
 import type { CaseSummary } from "@/types/cases";
 import { formatDateTime } from "@/utils/format-date";
 
-const MAXIMUM_RECENT_CASES = 8;
+const MAXIMUM_RECENT_CASES = 50;
 
 function getCaseLink(caseSummary: CaseSummary) {
   if (caseSummary.confirmedAt) return `/cases/${caseSummary.id}/confirm`;
@@ -22,11 +22,11 @@ export default function RecentCasesList() {
     fetchForms().then((forms) => setFormLabels(Object.fromEntries(forms.map((form) => [form.formId, form.shortLabel])))).catch(() => {});
   }, []);
 
-  if (!recentCases.length) return null;
   return (
-    <section className="mt-10">
-      <h2 className="text-sm font-semibold text-muted">Recent cases</h2>
-      <ul className="mt-3 divide-y divide-line rounded-xl border border-line bg-white">
+    <section className="flex min-h-0 flex-col rounded-xl border border-line bg-white">
+      <h2 className="border-b border-line px-4 py-2.5 text-sm font-semibold">Recent cases <span className="font-normal text-muted">({recentCases.length})</span></h2>
+      {!recentCases.length ? <p className="p-6 text-center text-sm text-muted">No cases yet.</p> : null}
+      <ul className="min-h-0 flex-1 divide-y divide-line overflow-auto">
         {recentCases.map((caseSummary) => (
           <li key={caseSummary.id}>
             <Link href={getCaseLink(caseSummary)} className="flex items-center gap-4 px-4 py-3 text-sm hover:bg-canvas">
