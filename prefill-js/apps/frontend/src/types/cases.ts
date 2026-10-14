@@ -12,6 +12,8 @@ export interface CaseDocument {
   assignedBy: string | null;
   isAssignedManually: boolean;
   identityNumber: string | null;
+  personName: string | null;
+  folderName: string | null;
   readFieldLabels: string[];
 }
 

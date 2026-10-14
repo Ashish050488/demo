@@ -8,8 +8,8 @@ import { getIdentityRecord } from "../../services/documents/identity-number-memo
 function listReadFieldLabels(caseDocument) {
   const identityRecord = getIdentityRecord(caseDocument.id) || {};
   const readLabels = [];
-  if (caseDocument.foundName || identityRecord.name) readLabels.push("Name");
-  if (caseDocument.foundDob || identityRecord.dob) readLabels.push("Date of birth");
+  if (caseDocument.foundName || caseDocument.holderName || identityRecord.name) readLabels.push("Name");
+  if (caseDocument.foundDob || caseDocument.holderDob || identityRecord.dob) readLabels.push("Date of birth");
   if (caseDocument.foundAddress || identityRecord.address) readLabels.push("Address");
   if (caseDocument.foundLast4) readLabels.push("Aadhaar last 4");
   if (identityRecord.panNumber) readLabels.push("PAN number");
@@ -26,6 +26,8 @@ export function toDocumentSummary(caseDocument) {
     hasQrCode: Boolean(caseDocument.qrFound), assignedNominee: caseDocument.assignedNominee,
     assignedBy: caseDocument.assignedBy || null, isAssignedManually: Boolean(caseDocument.assignedManually),
     identityNumber: identityRecord?.panNumber || identityRecord?.passportNumber || identityRecord?.dlNumber || caseDocument.panMaskedNumber || null,
+    personName: caseDocument.foundName || caseDocument.holderName || identityRecord?.name || null,
+    folderName: caseDocument.folderName || null,
     readFieldLabels: listReadFieldLabels(caseDocument),
   };
 }

@@ -1,4 +1,4 @@
-// Reads one saved upload in the background: OCR, classify, keep what it shows, then auto-assign it to a nominee.
+// Reads one saved upload in the background: OCR, classify, keep what it shows, then regroup the case by person.
 // Failures land in the case store as status "error", never as an unhandled rejection.
 import { createEnglishOcrWorker, readScanText } from "../ocr/scan-ocr-service.js";
 import { hasDecodableQr } from "../ocr/qr-detect-service.js";
@@ -6,7 +6,7 @@ import { classifyDocument, AADHAAR_DOC_TYPES, UNSUPPORTED_DOC_MESSAGE } from "./
 import { maskPan } from "./pan-extract-service.js";
 import { buildIdentityRecord } from "./read-identity-document-service.js";
 import { storeIdentityRecord } from "./identity-number-memory-service.js";
-import { assignDocumentToNominee } from "./assign-document-service.js";
+import { groupCaseDocuments } from "./group-documents-service.js";
 import { updateCaseDocument } from "../storage/case-store-service.js";
 import { TESSDATA_DIRECTORY } from "../../config/paths-config.js";
 
@@ -49,9 +49,11 @@ export async function processUploadedDocument(caseId, documentId, filePath) {
       status: documentType === "unrecognized" ? DOCUMENT_STATUSES.UNRECOGNIZED : DOCUMENT_STATUSES.DONE,
       message: describeReadResult(documentType, identityRecord), docType: documentType, qrFound: hasQrCode,
       panMaskedNumber: panRecord?.panNumber ? maskPan(panRecord.panNumber) : null,
+      // The holder's name and date of birth (never the ID number) are kept on disk, so grouping by person survives a restart.
+      holderName: identityRecord?.name ?? null, holderDob: identityRecord?.dob ?? null,
       ...pickAadhaarFields(AADHAAR_DOC_TYPES.has(documentType), fields),
     });
-    await assignDocumentToNominee(caseId, documentId).catch((error) => console.error("auto-assign failed:", error.message));
+    await groupCaseDocuments(caseId).catch((error) => console.error("grouping documents failed:", error.message));
   } catch (error) {
     await updateCaseDocument(caseId, documentId, { status: DOCUMENT_STATUSES.ERROR, message: "Reading this document failed" });
     console.error(`document OCR failed (case ${caseId}, document ${documentId}):`, error.message);

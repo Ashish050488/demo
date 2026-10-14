@@ -49,3 +49,4 @@ export function checkForm(formRules: FormRules, values: Record<string, string>):
 export const FIELD_LABELS: Record<string, string>;
 export function formatFieldLabel(fieldKey: string): string;
 export function getNomineeNumber(fieldKey: string): number | null;
+export function isSamePersonName(firstName: string | null | undefined, secondName: string | null | undefined): boolean;

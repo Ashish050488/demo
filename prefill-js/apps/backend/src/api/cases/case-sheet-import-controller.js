@@ -2,6 +2,7 @@
 // Multipart: "file" (.xlsx or .csv) and an optional "rowNumber". With several client rows and no rowNumber, the
 // answer lists the rows so the reviewer can pick one; the file is then sent again with the chosen row.
 import { sendData, ApiError, ERROR_CODES } from "../../helpers/api-response-helpers.js";
+import { groupCaseDocuments } from "../../services/documents/group-documents-service.js";
 import { importSheetIntoCase } from "../../services/batch/import-case-sheet-service.js";
 import { SheetFileError } from "../../services/batch/read-sheet-file-service.js";
 
@@ -16,7 +17,10 @@ export async function handleImportCaseSheet(request, response) {
     throw new ApiError(400, ERROR_CODES.INVALID_REQUEST, "rowNumber must be a sheet row number");
   }
   try {
-    sendData(response, await importSheetIntoCase(request.caseEntry, request.file.buffer, request.file.originalname, requestedRowNumber));
+    const importResult = await importSheetIntoCase(request.caseEntry, request.file.buffer, request.file.originalname, requestedRowNumber);
+    // Nominee names from the sheet decide which person's documents are Nominee 1, 2, 3.
+    if (!importResult.needsRowChoice) await groupCaseDocuments(request.caseEntry.id);
+    sendData(response, importResult);
   } catch (error) {
     if (error instanceof SheetFileError) throw new ApiError(422, "SHEET_NOT_USABLE", error.message);
     throw error;

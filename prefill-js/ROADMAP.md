@@ -133,7 +133,7 @@ our side: Ashish, Tushar). Their words are quoted where they matter.
 - **Not tested yet:** "document wins" and "kept corrections" with real uploaded documents. The logic is in place;
   it needs a case that has both documents and a sheet.
 
-### [ ] 3. Show auto-assignment clearly on the documents screen
+### [x] 3. Show auto-assignment clearly on the documents screen
 **Headline:** group uploaded documents by person, e.g. "Ashish Ranjan — 3 documents → Nominee 1".
 **Detail:**
 - The matching already exists (`assign-document-service.js`).

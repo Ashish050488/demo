@@ -161,7 +161,7 @@ export default function CaseReviewPage() {
       </div>
       <SourceDocumentDialog caseId={caseId} caseField={sourceField} caseDocuments={session.caseSummary?.documents || []} onClose={() => setSourceField(null)} />
       <AddDocumentDialog caseId={caseId} nomineeNumber={addDocumentNominee} onClose={() => setAddDocumentNominee(null)} onDocumentsRead={() => session.reloadFields(true)} />
-      <SheetImportDialog caseId={caseId} formId={fieldsView.formId} isOpen={isSheetImportOpen} onClose={() => setIsSheetImportOpen(false)} onImported={() => session.reloadFields(false)} />
+      <SheetImportDialog caseId={caseId} formId={fieldsView.formId} isOpen={isSheetImportOpen} onClose={() => setIsSheetImportOpen(false)} onImported={() => session.reloadFields(true)} />
       <RequiredFieldsDrawer session={session} sections={sections} isOpen={isRequiredDrawerOpen} onClose={() => setIsRequiredDrawerOpen(false)} onJumpToField={goToField} onChooseTick={handleChooseTick} />
       <BlockedFieldsDialog blockedFields={blockedFields} getSectionLabel={getSectionLabel} onClose={() => setBlockedFields([])} onJumpToField={(fieldKey) => { setBlockedFields([]); goToField(fieldKey); }} />
     </div>

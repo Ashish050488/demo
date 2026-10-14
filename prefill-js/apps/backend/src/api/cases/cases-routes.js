@@ -12,7 +12,7 @@ import { handleConfirmCase } from "./case-confirm-controller.js";
 import { handleImportCaseSheet } from "./case-sheet-import-controller.js";
 import { MAXIMUM_SHEET_FILE_SIZE_BYTES } from "../../services/batch/read-sheet-file-service.js";
 
-const MAXIMUM_FILES_PER_REQUEST = 10;
+const MAXIMUM_FILES_PER_REQUEST = 15;
 // Well above the 15MB per-file limit: multer aborts the WHOLE request on its own limit, so the real per-file
 // check happens after saving (case-documents-controller.js) and only rejects that one file.
 const MULTER_CEILING_BYTES = 40 * 1024 * 1024;
@@ -39,6 +39,7 @@ casesRouter.get("/:caseId", requireCaseMiddleware, casesController.handleGetCase
 casesRouter.delete("/:caseId", requireCaseMiddleware, casesController.handleDeleteCase);
 casesRouter.post("/:caseId/documents", requireCaseMiddleware, documentsUpload.array("files", MAXIMUM_FILES_PER_REQUEST), caseDocumentsController.handleUploadDocuments);
 casesRouter.post("/:caseId/documents/:documentId/assign", requireCaseMiddleware, caseDocumentsController.handleAssignDocument);
+casesRouter.post("/:caseId/nominees/swap", requireCaseMiddleware, caseDocumentsController.handleSwapNominees);
 casesRouter.get("/:caseId/documents/:documentId/view", requireCaseMiddleware, caseDocumentsController.handleViewDocument);
 casesRouter.delete("/:caseId/documents/:documentId", requireCaseMiddleware, caseDocumentsController.handleRemoveDocument);
 casesRouter.post("/:caseId/fill", requireCaseMiddleware, casesController.handleFillCase);
