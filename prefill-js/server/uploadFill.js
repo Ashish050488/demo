@@ -11,7 +11,7 @@ import XLSX from "xlsx";
 import { CRN_FORM, CAMS_FORM } from "../src/mapping_config.js";
 import { fillTextFields } from "../src/fillengine.js";
 import { applyCrnTickboxes, applyCamsTickboxes } from "../src/tickboxRules.js";
-import { validatorFor } from "../src/fieldValidate.js";
+import { validatorFor, validateIdNumberFor } from "../src/fieldValidate.js";
 import { uploadPdfPath, uploadResultsPath } from "./uploads.js";
 import { latestByField } from "./decisions.js";
 import { buildProfile, ID_TYPE_PRIORITY } from "./profile.js";
@@ -73,10 +73,13 @@ export async function runUploadFill(entry) {
   anyNomineeAadhaarLast4 = Boolean(profiles[1]?.aadhaarLast4 || profiles[2]?.aadhaarLast4);
 
   // form field key -> profile key
-  const PROFILE_KEY = {
-    name: "name", dob: "dob", address: "street", city: "city", state: "state", pincode: "pincode", country: "country",
-    state_country: "stateCountry", id_pan: "pan", id_passport: "passport", id_dl: "dl", id_details: "aadhaarLast4",
-  };
+  // form field -> document data key, from mappings/field-sources.json (the same file the UI shows)
+  const sources = JSON.parse(await readFile(path.join(ROOT, "mappings", "field-sources.json"), "utf-8"))[entry.formType] || {};
+  const PROFILE_KEY = {};
+  for (const [field, src] of Object.entries(sources)) {
+    const m = /^document\.(\w+)$/.exec(src);
+    if (m && m[1] !== "idNumber") PROFILE_KEY[field] = m[1];
+  }
   const ID_ROW_KIND = { id_pan: "pan", id_passport: "passport", id_dl: "dl", id_details: "aadhaarLast4" };
   const fromProfile = (n, key) => {
     const p = profiles[n] || {};
@@ -84,6 +87,7 @@ export async function runUploadFill(entry) {
     return got ? { value: got.value, confidence: got.confidence, sourceFile: null, from: got.from } : null;
   };
 
+  const flagged = {}; // field -> reason
   const getValue = async (field) => {
     if (field.nominee === 3) return { skipReason: "nominee 3 not supported in this demo", notApplicable: true };
     if (field.source === "UNSURE" || field.x == null) {
@@ -115,8 +119,10 @@ export async function runUploadFill(entry) {
         }
       }
       if (got) {
-        const validator = validatorFor(field.key);
-        if (validator && !validator(got.value).valid) return { skipReason: `OCR read something, but it failed validation: ${validator(got.value).reason}` };
+        // Keep the value but flag it - a wrong value read from a document is shown in red with the reason,
+        // never silently hidden (e.g. a pincode misread as 5 digits).
+        const check = field.key === "id_number" ? validateIdNumberFor(ID_OPTION[idKindFor(n)], got.value) : validatorFor(field.key)?.(got.value);
+        if (check && !check.valid) flagged[`${field.key}_n${n}`] = check.reason;
         return got;
       }
       if (field.source !== "excel" || !entry.useSampleData) return { skipReason: missing };
@@ -134,13 +140,17 @@ export async function runUploadFill(entry) {
   };
 
   const { pdfDoc, pages, results } = await fillTextFields(def.formConfig, mapping, getValue);
+  for (const r of results) {
+    if (flagged[r.field] && r.value != null) { r.status = "invalid"; r.reason = `Read from the document, but: ${flagged[r.field]} - please correct it`; }
+  }
   // which document each value came from, for the review screen's source chip
   for (const r of results) {
     const m = r.field.match(/^(.*)_n(\d)$/);
     if (!m || r.value == null || r.source_file) continue;
     const key = m[1] === "id_number" ? idKindFor(Number(m[2])) : PROFILE_KEY[m[1]];
-    const from = key && (profiles[Number(m[2])]?.[key] || (key === "street" ? profiles[Number(m[2])]?.address : null))?.from;
-    if (from) r.source_file = from;
+    const src = key && (profiles[Number(m[2])]?.[key] || (key === "street" ? profiles[Number(m[2])]?.address : null));
+    if (src?.from) r.source_file = src.from;
+    if (src?.docId) r.source_doc = src.docId;
   }
 
 

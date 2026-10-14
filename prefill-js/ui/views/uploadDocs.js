@@ -128,7 +128,7 @@ export async function renderUploadDocs(root, caseId, focusNominee) {
   });
 
   clear(root, h('div.page', h('div.wrap',
-    wizardHeader(2),
+    wizardHeader(2, caseId),
     h('h1', 'Upload documents'),
     h('p.lede.dim', 'Drop every document you have - Aadhaar (front and back), PAN card, passport, driving licence - for each nominee. Each one is read, matched to a nominee by name, and used to fill the form. The documents themselves are never shown.'),
     dropZone, errorBox, listEl,

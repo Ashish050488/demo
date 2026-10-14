@@ -19,6 +19,9 @@ import { fillTextFields } from "../src/fillengine.js";
 import { drawCheckmark } from "../src/fillkit.js";
 import { tickOptionBbox, tickboxPage } from "../src/tickboxRules.js";
 import uploadRoutes from "./uploadRoutes.js";
+import { CRN_FORM, CAMS_FORM } from "../src/mapping_config.js";
+import { REQUIRED, RULE_TEXT } from "../src/fieldValidate.js";
+import { warmUp } from "../src/paddleOcr.js";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(HERE, "..");
@@ -223,9 +226,92 @@ app.get("/api/cases/:case/download/:which", async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// ---- Form mapping viewer: every mapped box drawn over the BLANK form, read-only ----
+const MAPPED_FORMS = {
+  crn: { formConfig: CRN_FORM, mappingPath: path.join(ROOT, "mappings", "crn-broking-demat.json"), label: "CRN Broking & Demat" },
+  cams: { formConfig: CAMS_FORM, mappingPath: path.join(ROOT, "mappings", "cams-nomination.json"), label: "CAMS Mutual Fund" },
+};
+const SOURCE_WORDS = {
+  aadhaar: "Uploaded documents", profile: "Uploaded documents", pan: "PAN card", excel: "Typed / sample data",
+  today: "Today's date", rule: "Tick box (rule / reviewer)", UNSURE: "Not decided",
+};
+
+app.get("/api/mapping/:form", async (req, res, next) => {
+  try {
+    const def = MAPPED_FORMS[req.params.form];
+    if (!def) return res.status(404).json({ error: "unknown form" });
+    const mapping = JSON.parse(await readFile(def.mappingPath, "utf-8"));
+    const blank = path.join(ROOT, def.formConfig.blank);
+    const sizes = await pageSizes(blank);
+    const n = await pageCount(blank);
+    const frac = (page, x, y, w, hgt) => {
+      const s = sizes[page - 1];
+      return [x / s.width, y / s.height, (x + w) / s.width, (y + hgt) / s.height];
+    };
+    const items = [];
+    for (const f of mapping.fields) {
+      if (f.x == null || f.nominee === 3) continue;
+      const fs = f.fontSize || 10;
+      const height = f.type === "multiline" ? Math.max(fs * 1.2, (f.maxY ?? f.y + fs * 1.6) - f.y + fs * 0.85) : fs * 1.15;
+      // never wider than this nominee's column (next nominee's x), so a box can't spill into the next column
+      const nextColX = f.nominee ? Math.min(...mapping.fields.filter((g) => g.nominee === f.nominee + 1 && g.page === f.page && g.x != null).map((g) => g.x)) : Infinity;
+      const width = Math.min(f.type === "multiline" ? 120 : 95, nextColX - f.x - 16);
+      items.push({
+        id: `${f.key}${f.nominee != null ? `_n${f.nominee}` : ""}`, key: f.key, nominee: f.nominee, page: f.page, kind: "text",
+        type: f.type, source: SOURCE_WORDS[f.source] || f.source, fontSize: fs,
+        required: (REQUIRED[req.params.form] || []).includes(f.key), rule: RULE_TEXT[f.key] || "Free text",
+        box: frac(f.page, f.x - 1, f.y - fs * 0.9, width, height),
+        point: { x: f.x, y: f.y },
+      });
+    }
+    for (const t of def.formConfig.tickboxes) {
+      const cols = t.optionXByColumn ? [1, 2] : [null];
+      for (const col of cols) {
+        const opts = t.options || [null];
+        for (const opt of opts) {
+          const bb = tickOptionBbox(def.formConfig, col ? `${t.key}_n${col}` : t.key, opt ?? "x");
+          const box = opt == null ? { x: t.x, y: t.y, width: t.w, height: t.h } : bb;
+          if (!box || box.x == null || box.y == null) continue;
+          items.push({
+            id: `${t.key}${col ? `_n${col}` : ""}${opt ? ` = ${opt}` : ""}`, key: t.key, nominee: col, page: t.page, kind: "tick",
+            option: opt, source: SOURCE_WORDS.rule, required: (REQUIRED[req.params.form] || []).includes(t.key),
+            rule: "Tick exactly one option", box: frac(t.page, box.x - 1, box.y - (box.height || 10) * 0.85 - 1, (box.width || 8) + 2, (box.height || 10) + 2),
+          });
+        }
+      }
+    }
+    res.json({ form: req.params.form, label: def.label, pageCount: n, items });
+  } catch (err) { next(err); }
+});
+
+// Form field -> data source mapping (mappings/field-sources.json), read-only.
+app.get("/api/field-sources", async (req, res, next) => {
+  try { res.type("application/json").send(await readFile(path.join(ROOT, "mappings", "field-sources.json"), "utf-8")); } catch (err) { next(err); }
+});
+
+// The mapping file itself (mappings/*.json), read-only, for "View raw JSON".
+app.get("/api/mapping/:form/json", async (req, res, next) => {
+  try {
+    const def = MAPPED_FORMS[req.params.form];
+    if (!def) return res.status(404).json({ error: "unknown form" });
+    res.type("application/json").send(await readFile(def.mappingPath, "utf-8"));
+  } catch (err) { next(err); }
+});
+
+app.get("/api/mapping/:form/page/:n", async (req, res, next) => {
+  try {
+    const def = MAPPED_FORMS[req.params.form];
+    if (!def) return res.status(404).json({ error: "unknown form" });
+    const { png } = await renderPage(path.join(ROOT, def.formConfig.blank), Number(req.params.n), { scale: 1400 / 595.28 });
+    res.set("Content-Type", "image/png").set("Cache-Control", "no-store").send(png);
+  } catch (err) { next(err); }
+});
+
 app.use("/api/upload", uploadRoutes);
 
-app.use(express.static(UI_DIR));
+app.get("/shared/fieldValidate.js", (req, res) => res.type("text/javascript").sendFile(path.join(ROOT, "src", "fieldValidate.js")));
+// no-cache: the browser re-checks every file on load, so a normal reload always picks up a change
+app.use(express.static(UI_DIR, { setHeaders: (res) => res.set("Cache-Control", "no-cache") }));
 
 app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars
   console.error(err);
@@ -233,5 +319,6 @@ app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars
 });
 
 app.listen(PORT, HOST, () => {
+  warmUp();
   console.log(`review server: http://${HOST}:${PORT}/  (demo data only - 127.0.0.1 only)`);
 });

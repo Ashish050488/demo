@@ -6,6 +6,7 @@
 //   #/upload/<caseId>/review         step 3
 //   #/upload/<caseId>/confirm        step 4
 //   #/records                        step 5 (saved records, not case-specific)
+//   #/mapping/<crn|cams>             form mapping viewer (blank form + every mapped box)
 import { h, clear } from './util.js';
 import { renderCaseList } from './views/caselist.js';
 import { renderReview } from './views/review.js';
@@ -14,6 +15,7 @@ import { renderUploadDocs } from './views/uploadDocs.js';
 import { renderUploadReviewLive } from './views/uploadReviewLive.js';
 import { renderUploadConfirm } from './views/uploadConfirm.js';
 import { renderRecords } from './views/records.js';
+import { renderMapping } from './views/mapping.js';
 
 const app = document.getElementById('app');
 
@@ -33,7 +35,10 @@ async function route() {
   const view = h('div.view');
   clear(app, view);
   try {
-    if (parts[0] === 'case' && parts[1]) {
+    if (parts[0] === 'mapping') {
+      setCrumbs({ text: 'Cases', href: '#/' }, { text: 'Form mapping' });
+      await renderMapping(view, parts[1] === 'cams' ? 'cams' : 'crn');
+    } else if (parts[0] === 'case' && parts[1]) {
       setCrumbs({ text: 'Cases', href: '#/' }, { text: parts[1] });
       await renderReview(view, parts[1]);
     } else if (parts[0] === 'upload' && !parts[1]) {

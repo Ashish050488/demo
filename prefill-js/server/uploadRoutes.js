@@ -15,22 +15,25 @@ import multer from "multer";
 import crypto from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { rm } from "node:fs/promises";
+import { rm, mkdir } from "node:fs/promises";
+import { existsSync } from "node:fs";
 
 import { detectForm, SUPPORTED_FORMS } from "../src/formDetect.js";
 import { createEnglishWorker, ocrScanDetailed } from "../src/fillkit.js";
 import { classifyDocument, DOC_TYPE_LABELS, AADHAAR_DOC_TYPES, UNSUPPORTED_DOC_MESSAGE } from "../src/docClassify.js";
-import { validatorForField } from "../src/fieldValidate.js";
+import { checkForm } from "../src/fieldValidate.js";
 import { hasDecodableQr } from "../src/qrPeek.js";
 import { extractPanFields, maskPan } from "../src/pan.js";
 import { extractIdDoc } from "./idRead.js";
 import { setPan, getPan, clearPan } from "./panMemory.js";
 import {
   createUploadCase, getUploadCase, updateUploadCase, addDocument, updateDocument, removeDocument,
-  deleteUploadCase, UPLOADS_DIR,
+  deleteUploadCase, UPLOADS_DIR, documentPath,
 } from "./uploads.js";
 import { runUploadFill } from "./uploadFill.js";
-import { confirmCase, recordCorrection, deleteCaseRows, listCases } from "./store.js";
+import { renderPage } from "../src/rasterize.js";
+import { recordCorrection, deleteCaseRows, listCases, cleanFields } from "./store.js";
+import { saveToSheet, getSettings, saveSettings, testConnection, columnsFor } from "./sheets.js";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(HERE, "..");
@@ -87,6 +90,29 @@ router.get("/records", async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// ---- Google Sheet connection (Settings) ----
+router.get("/sheets/settings", async (req, res, next) => {
+  try { const s = await getSettings(); res.json({ connected: Boolean(s?.url), url: s?.url || "" }); } catch (err) { next(err); }
+});
+router.post("/sheets/settings", async (req, res) => {
+  const { url, secret } = req.body || {};
+  if (!/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(url || "")) {
+    return res.status(400).json({ error: "That doesn't look like an Apps Script web-app URL (it should end in /exec)" });
+  }
+  if (!secret) return res.status(400).json({ error: "Enter the SECRET you set in the script" });
+  try {
+    const ping = await testConnection({ url, secret });
+    await saveSettings({ url, secret });
+    res.json({ ok: true, sheet: ping.sheet });
+  } catch (err) { res.status(502).json({ error: err.message }); }
+});
+router.get("/sheets/columns/:form", async (req, res, next) => {
+  try {
+    if (!["crn", "cams"].includes(req.params.form)) return res.status(404).json({ error: "unknown form" });
+    res.json({ columns: await columnsFor(req.params.form) });
+  } catch (err) { next(err); }
+});
+
 router.post("/detect-form", detectUpload.single("file"), async (req, res, next) => {
   try {
     if (!req.file) return res.status(400).json({ error: "no file" });
@@ -133,7 +159,11 @@ router.post("/:caseId/sample-data", requireCase, async (req, res, next) => {
 // rejected on its own and the rest still go through.
 const documentsUpload = multer({
   storage: multer.diskStorage({
-    destination: (req, file, cb) => cb(null, path.join(UPLOADS_DIR, req.params.caseId)),
+    // The case's folder is deleted on confirm (scans removed) - recreate it if more documents are added later.
+    destination: (req, file, cb) => {
+      const dir = path.join(UPLOADS_DIR, req.params.caseId);
+      mkdir(dir, { recursive: true }).then(() => cb(null, dir), cb);
+    },
     filename: (req, file, cb) => {
       const docId = crypto.randomUUID();
       const ext = path.extname(file.originalname).toLowerCase();
@@ -288,6 +318,23 @@ router.post("/:caseId/documents/:docId/assign", requireCase, async (req, res, ne
   } catch (err) { next(err); }
 });
 
+// The uploaded document itself, for the review screen's "check this value against the card" view. Local
+// only (127.0.0.1), only a document of this case, and gone once the case is confirmed (scans are deleted then).
+router.get("/:caseId/documents/:docId/view", requireCase, async (req, res, next) => {
+  try {
+    const doc = req.uploadCase.documents.find((d) => d.id === req.params.docId);
+    if (!doc || !doc.filename) return res.status(404).json({ error: "no such document" });
+    const file = documentPath(req.uploadCase.id, doc.filename);
+    if (!existsSync(file)) return res.status(410).json({ error: "This document was deleted when the case was confirmed" });
+    res.set("Cache-Control", "no-store");
+    if (/.pdf$/i.test(doc.filename)) {
+      const { png } = await renderPage(file, 1, { scale: 2.5 });
+      return res.type("png").send(png);
+    }
+    res.sendFile(file);
+  } catch (err) { next(err); }
+});
+
 router.delete("/:caseId/documents/:docId", requireCase, async (req, res, next) => {
   try {
     const ok = await removeDocument(req.params.caseId, req.params.docId);
@@ -337,21 +384,28 @@ router.post("/:caseId/confirm", requireCase, async (req, res, next) => {
     const entry = req.uploadCase;
     const rawFields = req.body?.fields;
     if (!rawFields || typeof rawFields !== "object") return res.status(400).json({ error: "need fields: {field: value}" });
-    // Safety net, not the only check (the client validates as you type, and the OCR stage already rejects a
-    // bad value at extraction) - a value that fails its field's shape check is dropped here rather than ever
-    // written to the store, in case either of those was bypassed.
-    const fields = {};
-    const rejected = [];
-    for (const [key, value] of Object.entries(rawFields)) {
-      const validator = validatorForField(key);
-      const check = validator ? validator(value) : { valid: true };
-      if (check.valid) fields[key] = value; else rejected.push({ field: key, reason: check.reason });
+    // The form can't be saved while a required field is empty or any value breaks its rule - same check the
+    // review screen runs (src/fieldValidate.js), enforced here too so it can't be bypassed.
+    const { missing, invalid } = checkForm(entry.formType, rawFields);
+    if (missing.length || invalid.length) {
+      return res.status(422).json({ error: "Not saved - fix the flagged fields first", missing, invalid });
     }
-    await confirmCase({ caseId: entry.id, formType: entry.formType, camsVariant: entry.camsVariant, fields });
+    const fields = { ...rawFields };
+    const rejected = [];
+    // Saved to the Google Sheet (one tab per form). PAN numbers are stripped first (cleanFields), as before.
+    const clean = cleanFields(fields);
+    const notStored = Object.keys(fields).filter((k) => !(k in clean));
+    let sheet;
+    try {
+      sheet = await saveToSheet({ caseId: entry.id, formType: entry.formType, fields: clean });
+    } catch (err) {
+      return res.status(err.code === "NO_SHEET" ? 412 : 502).json({ error: `Not saved: ${err.message}. Your documents are kept - fix this and press Save again.` });
+    }
+    const saved = { ...clean, case_id: 1, form_type: 1, cams_variant: 1, confirmed_at: 1 };
     await rm(path.join(UPLOADS_DIR, entry.id), { recursive: true, force: true });
     for (const doc of entry.documents) clearPan(doc.id); // every PAN number this case ever read, gone now too
     await updateUploadCase(entry.id, { confirmedAt: new Date().toISOString(), scansDeletedAt: new Date().toISOString() });
-    res.json({ ok: true, caseId: entry.id, scansDeleted: true, rejected });
+    res.json({ ok: true, caseId: entry.id, scansDeleted: true, rejected, file: `Google Sheet, tab "${sheet.tab}", row ${sheet.row}`, savedFields: Object.keys(saved).length - 4, notStored });
   } catch (err) { next(err); }
 });
 

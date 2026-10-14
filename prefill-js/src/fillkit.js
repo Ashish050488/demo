@@ -2,7 +2,8 @@
 // fit a row, and draw a vector checkmark over a printed box/glyph. No form-specific knowledge here.
 import path from "node:path";
 import os from "node:os";
-import { writeFile, mkdtemp } from "node:fs/promises";
+import { writeFile, mkdtemp, readFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import { createWorker, PSM } from "tesseract.js";
 import { rgb } from "pdf-lib";
 
@@ -33,7 +34,22 @@ async function toTempPng(png) {
  * fallback if PaddleOCR doesn't produce one (or if loading/running it fails - wrapped in try/catch so that
  * never takes the whole OCR job down). PaddleOCR gets the image/PDF-page as close to its original form as
  * possible (not our Otsu-binarized version) - it's trained on natural photos, not pre-thresholded output. */
+// In-memory only (raw OCR text holds full ID numbers - never cached to disk). Keyed by file content, so the
+// same photo uploaded again - or re-read after its in-memory ID record was lost - skips OCR entirely.
+const OCR_CACHE = new Map();
+const OCR_CACHE_MAX = 60;
+
 export async function ocrScanDetailed(worker, scanPath) {
+  const key = createHash("sha256").update(await readFile(scanPath)).digest("hex");
+  const hit = OCR_CACHE.get(key);
+  if (hit) return hit;
+  const result = await ocrScanUncached(worker, scanPath);
+  OCR_CACHE.set(key, result);
+  if (OCR_CACHE.size > OCR_CACHE_MAX) OCR_CACHE.delete(OCR_CACHE.keys().next().value);
+  return result;
+}
+
+async function ocrScanUncached(worker, scanPath) {
   const ext = path.extname(scanPath).toLowerCase();
   const { png } = IMAGE_EXTENSIONS.has(ext)
     ? await rasterizeImageFile(scanPath)

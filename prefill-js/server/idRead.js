@@ -2,6 +2,7 @@
 // that memory while the uploaded document is still on disk, which used to silently blank the PAN field. This
 // re-reads such a document on demand so the number comes back - still never written anywhere but memory.
 import path from "node:path";
+import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { createEnglishWorker, ocrScanDetailed } from "../src/fillkit.js";
 import { extractPanFields } from "../src/pan.js";
@@ -37,7 +38,9 @@ export function extractIdDoc(docType, linesByPass) {
 
 /** For every ID document of this case whose in-memory record is gone, OCR it again from disk. */
 export async function rereadMissingIdDocs(entry) {
-  const missing = entry.documents.filter((d) => d.status === "done" && ID_DOC_TYPES.has(d.docType) && !getPan(d.id) && d.filename);
+  // only documents whose file is still on disk (a confirmed case's scans are deleted)
+  const missing = entry.documents.filter((d) => d.status === "done" && ID_DOC_TYPES.has(d.docType) && !getPan(d.id) && d.filename
+    && existsSync(documentPath(entry.id, d.filename)));
   if (!missing.length) return;
   const worker = await createEnglishWorker(TESSDATA);
   try {

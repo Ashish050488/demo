@@ -3,7 +3,7 @@
 // profile keys (PROFILE_KEY_FOR_FIELD); documents only ever feed this profile. Adding a new document type
 // means teaching it to fill these keys - no form needs to change.
 import { getPan } from "./panMemory.js";
-import { validateName, validateDob, validatePan, validatePincode } from "../src/fieldValidate.js";
+import { validateName, validateDob, validatePan } from "../src/fieldValidate.js";
 
 const STATES = ["Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa", "Gujarat", "Haryana",
   "Himachal Pradesh", "Jharkhand", "Karnataka", "Kerala", "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya",
@@ -16,7 +16,9 @@ const STATES = ["Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhatt
  * the part just before the state (Aadhaar/DL/passport all print district/city there). */
 export function parseAddress(address) {
   if (!address) return {};
-  const pin = address.match(/\b(\d{6})\b/);
+  // Last run of 5-7 digits (a misread 6-digit pincode is often 5 or 7) - kept so the check can flag it.
+  const pins = [...address.matchAll(/\b(\d{5,7})\b/g)];
+  const pin = pins.length ? pins[pins.length - 1] : null;
   const state = STATES.find((s) => new RegExp(`\\b${s.replace(/ /g, "\\s*")}\\b`, "i").test(address)) || null;
   let rest = address;
   if (pin) rest = rest.replace(pin[0], "");
@@ -38,13 +40,15 @@ const ok = (validator, v) => v != null && v !== "" && (!validator || validator(v
 /** docs: the nominee's documents from the manifest (status 'done'). Returns {key: {value, confidence, from}}. */
 export function buildProfile(docs) {
   const candidates = {}; // key -> [{value, confidence, from}]
+  let docId = null;
   const add = (key, value, confidence, from, validator) => {
     if (!ok(validator, value)) return;
-    (candidates[key] ||= []).push({ value, confidence: confidence ?? 0, from });
+    (candidates[key] ||= []).push({ value, confidence: confidence ?? 0, from, docId });
   };
   for (const d of docs) {
     if (d.status !== "done") continue;
     const mem = getPan(d.id) || {};
+    docId = d.id;
     const label = { pan: "PAN card", passport: "Passport", driving_licence: "Driving licence" }[d.docType] || "Aadhaar";
     if (/^aadhaar/.test(d.docType || "")) {
       add("name", d.foundName, d.foundNameConfidence, label, validateName);
@@ -67,9 +71,9 @@ export function buildProfile(docs) {
   }
   if (profile.address) {
     const parsed = parseAddress(profile.address.value);
-    const base = { confidence: profile.address.confidence, from: profile.address.from };
+    const base = { confidence: profile.address.confidence, from: profile.address.from, docId: profile.address.docId };
     for (const k of ["city", "state", "pincode", "country"]) {
-      if (parsed[k] && (k !== "pincode" || validatePincode(parsed[k]).valid)) profile[k] = { value: parsed[k], ...base };
+      if (parsed[k]) profile[k] = { value: parsed[k], ...base };
     }
     if (parsed.street) profile.street = { value: parsed.street, ...base };
     if (parsed.state) profile.stateCountry = { value: `${parsed.state}, India`, ...base };

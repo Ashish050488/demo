@@ -73,7 +73,7 @@ async function writeWorkbook(wb) {
   await rename(tmp, STORE_PATH); // atomic swap - a reader never sees a half-written file
 }
 
-function cleanFields(fields) {
+export function cleanFields(fields) {
   const out = {};
   for (const [k, v] of Object.entries(fields || {})) {
     if (PAN_FIELD_RE.test(k)) continue;
