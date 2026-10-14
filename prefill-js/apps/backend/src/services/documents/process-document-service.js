@@ -12,6 +12,24 @@ import { TESSDATA_DIRECTORY } from "../../config/paths-config.js";
 
 export const DOCUMENT_STATUSES = { PROCESSING: "processing", DONE: "done", UNRECOGNIZED: "unrecognized", ERROR: "error" };
 
+// OCR is CPU-heavy: a batch can bring 100+ scans at once. At most this many are read at the same time; the rest
+// wait their turn (still shown as "Reading…").
+const MAXIMUM_PARALLEL_DOCUMENT_READS = 2;
+let runningReadCount = 0;
+const waitingReads = [];
+async function runWithReadSlot(task) {
+  // A finished read hands its slot straight to the next waiting one, so the count can never overshoot.
+  if (runningReadCount >= MAXIMUM_PARALLEL_DOCUMENT_READS) await new Promise((resolve) => waitingReads.push(resolve));
+  else runningReadCount += 1;
+  try {
+    return await task();
+  } finally {
+    const nextRead = waitingReads.shift();
+    if (nextRead) nextRead();
+    else runningReadCount -= 1;
+  }
+}
+
 function describeReadResult(documentType, identityRecord) {
   if (documentType === "unrecognized") return "Not recognised - supported: Aadhaar (front/back/full), PAN card, passport, driving licence";
   if (documentType === "pan") return identityRecord?.panNumber ? "PAN card added - number read" : "PAN card added - number not clearly readable";
@@ -36,7 +54,11 @@ function pickAadhaarFields(isAadhaarDocument, fields) {
   };
 }
 
-export async function processUploadedDocument(caseId, documentId, filePath) {
+export function processUploadedDocument(caseId, documentId, filePath) {
+  return runWithReadSlot(() => readOneDocument(caseId, documentId, filePath));
+}
+
+async function readOneDocument(caseId, documentId, filePath) {
   const worker = await createEnglishOcrWorker(TESSDATA_DIRECTORY);
   try {
     const { fields, rawText, linesByPass } = await readScanText(worker, filePath);

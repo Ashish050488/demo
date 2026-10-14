@@ -152,7 +152,7 @@ our side: Ashish, Tushar). Their words are quoted where they matter.
 
 ## Next demo — MEDIUM
 
-### [ ] 5. Batch upload: one Excel, many clients (THE main ask)
+### [x] 5. Batch upload: one Excel, many clients (THE main ask)
 **Headline:** upload a master Excel (15–50 rows) plus each client's documents → one filled form per row.
 **Detail:**
 - New "Batch" entry on Home (the card is already there, marked "Next step").
@@ -167,7 +167,7 @@ our side: Ashish, Tushar). Their words are quoted where they matter.
 - Process cases in the background, 2–3 at a time (OCR is CPU-heavy).
 - Validate rows before filling. A row with problems is still filled, but marked "Needs fixing".
 
-### [ ] 6. Batch progress screen (live, as each form finishes)
+### [x] 6. Batch progress screen (live, as each form finishes)
 **Headline:** one card per client: Waiting → Reading documents → Filling → Done / Needs fixing.
 **Detail:**
 - Server-Sent Events (`GET /api/batches/:batchId/events`) push each case's status as it changes; no reload.

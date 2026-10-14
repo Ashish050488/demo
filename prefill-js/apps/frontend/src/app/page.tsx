@@ -1,6 +1,7 @@
 import Link from "next/link";
 import PageContainer from "@/components/ui/PageContainer";
 import RecentCasesList from "@/components/cases/RecentCasesList";
+import RecentBatchesList from "@/components/batches/RecentBatchesList";
 
 function ChoiceCard({ href, title, description, badge }: { href?: string; title: string; description: string; badge?: string }) {
   const content = (
@@ -26,8 +27,9 @@ export default function HomePage() {
         <div className="space-y-4">
           <ChoiceCard href="/cases/new" title="Single case"
             description="Upload one person's documents (Aadhaar, PAN, passport, driving licence). Fields are read and filled; you review and save." />
-          <ChoiceCard title="Batch" badge="Next step"
-            description="Upload an Excel or Google Sheet with many users. Each row becomes a filled form, shown as soon as it is ready." />
+          <ChoiceCard href="/batches/new" title="Batch"
+            description="Upload one Excel with up to 50 clients plus a folder of their documents. Each row becomes a filled form, shown live as soon as it is ready." />
+          <RecentBatchesList />
         </div>
         <RecentCasesList />
       </div>

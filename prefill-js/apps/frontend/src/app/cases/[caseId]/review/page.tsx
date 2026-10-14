@@ -107,7 +107,10 @@ export default function CaseReviewPage() {
       <div className="grid min-h-0 flex-1 grid-cols-[12.5rem_minmax(0,0.95fr)_minmax(0,1.15fr)]">
         <aside className="flex min-h-0 flex-col border-r border-line bg-white">
           <div className="border-b border-line px-4 py-3">
-            <Link href={`/cases/${caseId}/documents`} className="text-[11px] text-muted hover:text-ink">← Documents</Link>
+            <div className="flex gap-3">
+              {session.caseSummary?.batchId ? <Link href={`/batches/${session.caseSummary.batchId}`} className="text-[11px] text-muted hover:text-ink">← Batch</Link> : null}
+              <Link href={`/cases/${caseId}/documents`} className="text-[11px] text-muted hover:text-ink">{session.caseSummary?.batchId ? "Documents" : "← Documents"}</Link>
+            </div>
             <div className="mt-1 text-sm font-semibold leading-tight">{fieldsView.label}</div>
             <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-canvas">
               <div className="h-full rounded-full bg-brand-500" style={{ width: `${Math.round((filledFieldKeys.size / Math.max(1, visibleFields.length)) * 100)}%` }} />
