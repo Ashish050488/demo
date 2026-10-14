@@ -1,0 +1,27 @@
+{
+  "name": "prefill-js",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Node.js rebuild of the nomination-form prefill/review demo. Everything local; no Python.",
+  "type": "module",
+  "scripts": {
+    "fetch-tessdata": "node scripts/fetch-tessdata.js",
+    "ocr-aadhaar": "node scripts/ocr_aadhaar.js",
+    "check-fillable": "node scripts/check_fillable.js",
+    "build-mapping": "node scripts/build_mapping.js",
+    "build-demo-excel": "node scripts/build_demo_excel.js",
+    "start": "node server/index.js"
+  },
+  "dependencies": {
+    "@gutenye/ocr-node": "^1.4.9",
+    "canvas": "^3.2.3",
+    "express": "^5.3.0",
+    "jsqr": "^1.4.0",
+    "multer": "^2.4.0",
+    "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^4.7.76",
+    "tesseract.js": "^5.1.1",
+    "xlsx": "^0.18.5",
+    "zxing-wasm": "^3.1.5"
+  }
+}

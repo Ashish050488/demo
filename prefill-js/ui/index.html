@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nomination prefill — demo with test data</title>
+<link rel="stylesheet" href="desk.css">
+<style>
+  /* small additions this slice needs beyond what the kit's desk.css already has */
+  body.desk .demo-banner { background: #fbf0d6; color: #5a4300; font-size: 12px; padding: 4px 18px; text-align: center; border-bottom: 1px solid #e0dfda; }
+  body.desk .toggle-na { font-size: 12px; color: var(--accent); background: none; border: 0; cursor: pointer; padding: 8px 14px; text-align: left; border-top: 1px solid var(--line); flex: none; }
+  body.desk .vrow.flagged { box-shadow: inset 3px 0 var(--low); }
+
+  /* the extraction-quality flag (low_confidence / needs_review / not_applicable) - only shown when it isn't
+     plain "ok", since "ok" just means the fill engine had no complaint, not that a person reviewed it */
+  body.desk .flag-chip { font-size: 10px; padding: 1px 6px; border-radius: 999px; white-space: nowrap; }
+  body.desk .flag-low_confidence { background: var(--medium-bg); color: var(--medium); }
+  body.desk .flag-needs_review { background: var(--low-bg); color: var(--low); }
+  body.desk .flag-not_applicable { background: var(--panel2); color: var(--dim); }
+
+  /* the decision-state pill - this is the thing that actually matters: has a HUMAN looked at this field yet */
+  body.desk .decision-pill { font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 999px; white-space: nowrap; }
+  body.desk .decision-pending-required { background: var(--low-bg); color: var(--low); }
+  body.desk .decision-pending-optional { background: var(--panel2); color: var(--dim); }
+  body.desk .decision-approved { background: var(--high-bg); color: var(--high); }
+  body.desk .decision-corrected { background: var(--accent-bg); color: var(--accent); }
+  body.desk .decision-skipped { background: var(--panel2); color: var(--dim); }
+
+  /* a dedicated full-width toolbar for the case title/progress + regenerate/download controls - these used to
+     be crammed into the narrow 260px list column and visibly clipped ("Regenerated" -> "Regen") */
+  body.desk .case-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    padding: 10px 18px; border-bottom: 1px solid var(--line); background: var(--panel); flex-wrap: wrap; }
+  body.desk .ct-title { display: flex; align-items: baseline; gap: 12px; }
+  body.desk .ct-title h2 { margin: 0; font-size: 16px; }
+  body.desk .ct-progress { font-size: 12px; color: var(--dim); display: flex; align-items: center; gap: 8px; }
+  body.desk .ct-progress .pbar { width: 120px; height: 6px; border-radius: 3px; background: var(--panel3); overflow: hidden; }
+  body.desk .ct-progress .pbar > i { display: block; height: 100%; background: var(--low); }
+  body.desk .ct-progress .pbar > i.full { background: var(--high); }
+  body.desk .ct-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+  /* A true text highlight, not a boxed/outlined rectangle: one of these is drawn per actually-written line
+     (server computes one fraction-box per line from what pdf-lib really drew), so multi-line fields get a
+     clean highlighter stripe under each line instead of one loose rectangle spanning the whole block
+     including the gaps between lines. Overrides the kit's default .box.focus/.box.cited (an outlined,
+     pulsing box - works for a single CMIE table cell, not for text that wraps across several lines here). */
+  body.desk .box.focus, body.desk .box.cited {
+    background: rgba(255, 214, 0, .38); outline: none; box-shadow: none; animation: none;
+    border-radius: 2px; mix-blend-mode: multiply;
+  }
+  /* the "read here" floating label is redundant once the text itself is highlighted - drop it */
+  body.desk .boxtag { display: none; }
+
+  /* readability: body text at 15px+ everywhere, a bit more line-height for long field lists */
+  body.desk { font-size: 16px; line-height: 1.5; }
+  body.desk .vrow .vname { font-size: 15px; }
+  body.desk .vrow .vval { font-size: 15px; max-width: 20ch; }
+  body.desk .fname { font-size: 15px; }
+  body.desk .opt b { font-size: 15px; }
+  body.desk .decide .val, body.desk .decide .note { font-size: 15px; }
+  body.desk .vbig b { font-size: 28px; }
+
+  /* the upload wizard's step indicator - .step/.stepn reuse the topbar's shapes, recoloured for a white page */
+  body.desk .wizard-head { padding: 14px 18px 0; }
+  /* review screens put the step bar above a flex:1 three/two-column grid (.desk-review) - this wrapper must
+     NOT be flex:1 itself (unlike .page, built for a single scrollable screen), or the two compete for height
+     and leave a large empty gap under the step bar with the columns squeezed into whatever's left. */
+  body.desk .review-head { flex: none; padding: 14px 18px 0; }
+  body.desk .wizard-steps { display: flex; gap: 4px; flex-wrap: wrap; margin: 6px 0 4px; }
+  body.desk .wizard-steps .step { color: var(--dim); font-size: 13px; padding: 6px 10px; border-radius: 6px; display: flex; align-items: center; gap: 6px; }
+  body.desk .wizard-steps .step.on { background: var(--accent-bg); color: var(--accent); font-weight: 700; }
+  body.desk .wizard-steps .step.locked { opacity: .55; }
+  body.desk .wizard-steps .stepn { width: 18px; height: 18px; border-radius: 50%; border: 1px solid currentColor; display: grid; place-items: center; font-size: 11px; flex: none; }
+  body.desk .wizard-steps .step.on .stepn { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  /* "Missing" - a field with nothing to approve, distinct from "needs approval" */
+  body.desk .decision-missing { background: var(--low-bg); color: var(--low); }
+  body.desk .decision-not-provided { background: var(--panel2); color: var(--dim); }
+
+  /* the confirmation banner re-used on the upload confirm screen */
+  body.desk .recorded s { color: var(--dim); margin-right: 4px; }
+
+  /* the multi-file document upload area and its per-file list (step 2 of the upload wizard) */
+  body.desk .dropzone { border: 2px dashed var(--line2); border-radius: 10px; padding: 26px; text-align: center; margin-bottom: 14px; background: var(--panel); }
+  body.desk .dropzone.over { border-color: var(--accent); background: var(--accent-bg); }
+  body.desk .dropzone p { margin: 4px 0; }
+  body.desk .doclist { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+  body.desk .doclist .fcard { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; grid-template-areas: "name right assign remove" "read read read read"; gap: 6px 14px; align-items: center; }
+  body.desk .doclist .fcard > .fname { grid-area: name; }
+  body.desk .doclist .fcard > .fright { grid-area: right; }
+  body.desk .doclist .fcard > .fassign { grid-area: assign; }
+  body.desk .doclist .fcard > .btn { grid-area: remove; }
+  body.desk .doclist .fcard > .fread { grid-area: read; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  body.desk .rchip { font-size: 12px; background: var(--high-bg); color: var(--high); padding: 1px 8px; border-radius: 999px; }
+  body.desk .doclist .fright { display: flex; flex-direction: column; gap: 2px; align-items: flex-end; text-align: right; }
+  body.desk .nominee-select { font: inherit; font-size: 13px; padding: 6px 10px; border: 1px solid var(--line2); border-radius: 7px; background: var(--panel); color: var(--fg); }
+
+  /* the live-editing review screen (ui/views/uploadReviewLive.js) - two columns: editable field list | page */
+  body.desk .col-list > .livelist { flex: 1; min-height: 0; overflow-y: auto; padding: 6px 8px 12px; }
+  body.desk .liverow { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) auto auto; gap: 10px; align-items: center; padding: 7px 8px; border-radius: 7px; border: 1px solid transparent; }
+  body.desk .liverow:hover { background: var(--panel); border-color: var(--line); }
+  body.desk .liverow.flagged { box-shadow: inset 3px 0 var(--low); }
+  body.desk .liverow.on { border-color: var(--accent); }
+  body.desk .lname { font-weight: 600; font-size: 14px; }
+  body.desk .lval-input { font: inherit; font-size: 14px; padding: 6px 9px; border: 1px solid var(--line2); border-radius: 6px; background: var(--panel); color: var(--fg); min-width: 0; }
+  body.desk .lval-input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  body.desk .lval-input.invalid { border-color: var(--low); background: var(--low-bg); }
+  body.desk .lval.dim { font-size: 14px; }
+  body.desk .lsrc { white-space: nowrap; }
+
+  body.desk [hidden] { display: none !important; }
+  /* ---- review screen v2: one screen, no page scroll. [fields 440px | preview] ---- */
+  body.desk .lr { flex: 1; min-height: 0; display: flex; flex-direction: column; width: 100%; }
+  body.desk .lr-top { flex: none; display: flex; align-items: center; gap: 14px; padding: 8px 16px; border-bottom: 1px solid var(--line); background: var(--panel); flex-wrap: wrap; }
+  body.desk .lr-top .wizard-steps { margin: 0; }
+  body.desk .lr-top .wizard-steps .step { padding: 4px 8px; font-size: 12px; }
+  body.desk .lr-top h2 { margin: 0; font-size: 15px; }
+  body.desk .lr-top .grow { flex: 1; }
+  body.desk .lr-body { flex: 1; min-height: 0; display: grid; grid-template-columns: 440px minmax(0, 1fr); }
+  body.desk .lr-fields { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--line); background: var(--bg); }
+  body.desk .lr-filter { flex: none; display: flex; gap: 6px; padding: 10px 12px; border-bottom: 1px solid var(--line); align-items: center; }
+  body.desk .lr-filter button { font: inherit; font-size: 13px; padding: 4px 12px; border-radius: 999px; border: 1px solid var(--line2); background: var(--panel); cursor: pointer; color: var(--fg); }
+  body.desk .lr-filter button.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+  body.desk .lr-list { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 12px 24px; }
+  body.desk .lr-sec { position: sticky; top: -4px; z-index: 1; background: var(--bg); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--dim); padding: 12px 2px 6px; display: flex; justify-content: space-between; }
+  body.desk .fr { padding: 8px 10px; border-radius: 8px; border: 1px solid transparent; margin-bottom: 2px; cursor: pointer; }
+  body.desk .fr:hover { background: var(--panel); }
+  body.desk .fr.on { background: var(--panel); border-color: var(--accent); }
+  body.desk .fr-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+  body.desk .fr-label { font-size: 13px; font-weight: 600; flex: 1; }
+  body.desk .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--high); }
+  body.desk .dot.warn { background: var(--medium); }
+  body.desk .dot.miss { background: var(--low); }
+  body.desk .dot.na { background: var(--line2); }
+  body.desk .src { font-size: 11px; color: var(--dim); background: var(--panel2); padding: 1px 7px; border-radius: 999px; white-space: nowrap; }
+  body.desk .fr .lval-input { width: 100%; box-sizing: border-box; }
+  body.desk .fr textarea.lval-input { resize: vertical; min-height: 56px; }
+  body.desk .fr-more { font-size: 12px; color: var(--dim); margin-top: 6px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  body.desk .fr-more .warn-t { color: var(--low); }
+  body.desk .lr-preview { display: flex; flex-direction: column; min-height: 0; background: var(--panel); }
+  body.desk .lr-preview .pv-head { flex: none; display: flex; align-items: center; gap: 10px; padding: 8px 14px; border-bottom: 1px solid var(--line); }
+  body.desk .lr-preview .pv-scroll { flex: 1; min-height: 0; overflow: auto; scroll-behavior: smooth; }
+  body.desk .lr-preview .pv-stage { max-width: 900px; }
+  body.desk .pgtabs button { font: inherit; font-size: 12px; padding: 3px 10px; border: 1px solid var(--line2); background: var(--panel); border-radius: 6px; cursor: pointer; }
+  body.desk .pgtabs button.on { background: var(--accent-bg); color: var(--accent); border-color: var(--accent); }
+  @media (max-width: 900px) { body.desk .lr-body { grid-template-columns: 1fr; grid-template-rows: 50vh 1fr; } }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="#/"><span class="logo">R</span> Nomination prefill review</a>
+  <span class="spacer"></span>
+  <nav id="crumbs" class="crumbs"></nav>
+</header>
+<div class="demo-banner">Demo — local only. Sample documents of an internal team member. Nothing leaves this machine.</div>
+<main id="app"></main>
+<script type="module" src="app.js"></script>
+</body>
+</html>

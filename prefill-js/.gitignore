@@ -1,0 +1,9 @@
+# personal data — never goes to git
+data/
+output/
+
+# downloaded language models (large binaries, re-downloadable; also never needed in git)
+tessdata/
+
+node_modules/
+*.log
