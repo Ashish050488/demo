@@ -89,6 +89,15 @@
       "fields": [
         "guardian_name"
       ]
+    },
+    {
+      "key": "holders",
+      "label": "Account holders (page 2)",
+      "fields": [
+        "first_holder_name",
+        "second_holder_name",
+        "third_holder_name"
+      ]
     }
   ]
 }

@@ -24,7 +24,8 @@ export const CAMS_NOMINATION_FORM_CONFIGURATION = {
     { key: "address", re: /^Address of$/, perNominee: true, page: 1 },
     { key: "mobile", re: /^Mobile$/, perNominee: true, page: 2 },
     { key: "email", re: /^Email ID of$/, perNominee: true, page: 2 },
-    { key: "guardian_name", re: /^Nominee$/, perNominee: false, page: 2 },
+    { key: "guardian_name", re: /^Nominee$/, perNominee: true, page: 2 }, // one column per nominee, like mobile/email
+    { key: "first_holder_name", re: /^Sole \/ First Holder/, perNominee: false, page: 2 },
   ],
   tickboxes: [
     {

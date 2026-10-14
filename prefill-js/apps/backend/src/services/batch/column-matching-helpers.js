@@ -77,7 +77,12 @@ export function matchSheetColumns(rows, batchColumns) {
   const keyRowIndex = findKeyRowIndex(rows, columnKeys);
   let headingRowIndex = keyRowIndex;
   if (keyRowIndex >= 0) {
-    rows[keyRowIndex].forEach((cell, columnIndex) => { if (columnKeys.has(cell.text)) assignColumn(columnIndex, cell.text); else if (cell.text) unknownHeadings.push(cell.text); });
+    rows[keyRowIndex].forEach((cell, columnIndex) => {
+      if (columnKeys.has(cell.text)) assignColumn(columnIndex, cell.text);
+      // An older template's single field that is now one per nominee (CAMS guardian_name) -> nominee 1.
+      else if (columnKeys.has(`${cell.text}_n1`)) assignColumn(columnIndex, `${cell.text}_n1`);
+      else if (cell.text) unknownHeadings.push(cell.text);
+    });
   } else {
     headingRowIndex = rows.findIndex((row, rowIndex) => rowIndex < HEADER_SEARCH_ROW_COUNT && row.some((cell) => cell.text));
     const labelLookup = buildLabelLookup(batchColumns);

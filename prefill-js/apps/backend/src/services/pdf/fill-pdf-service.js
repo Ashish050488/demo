@@ -57,7 +57,7 @@ export async function fillTextFields(formConfig, mapping, getValue) {
   for (const field of mapping.fields) {
     const label = `${field.key}${field.nominee != null ? `_n${field.nominee}` : ""}`;
     const got = (await getValue(field, label)) || {};
-    const { value = null, confidence = null, sourceFile = null, skipReason = null, notApplicable = false, notProvided = false } = got;
+    const { value = null, confidence = null, sourceFile = null, skipReason = null, notApplicable = false, notProvided = false, copiedFrom = null } = got;
 
     let bbox = field.x != null ? { x: field.x, y: field.y, width: null, height: null } : null;
     let lines = null; // one box per actual drawn line - what the UI highlights, instead of one loose rectangle
@@ -98,6 +98,7 @@ export async function fillTextFields(formConfig, mapping, getValue) {
     results.push({
       field: label, page: field.page, bbox, lines, value, source: field.source,
       source_file: sourceFile, ocr_confidence: confidence, status, reason,
+      ...(copiedFrom ? { copied_from: copiedFrom } : {}),
     });
   }
 

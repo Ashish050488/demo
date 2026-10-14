@@ -8,7 +8,7 @@ export const FIELD_LABELS = {
   id_dl: "Driving licence no.", guardian_name: "Guardian name", guardian_address: "Guardian address",
   guardian_city: "Guardian city", guardian_state: "Guardian state", guardian_pincode: "Guardian pincode",
   guardian_country: "Guardian country", guardian_mobile: "Guardian mobile", guardian_email: "Guardian email",
-  guardian_pan: "Guardian PAN", guardian_id_type: "Guardian ID type", applicant_name: "Applicant name",
+  guardian_pan: "Guardian PAN", guardian_id_type: "Guardian ID type", applicant_name: "Applicant name", first_holder_name: "First holder name", second_holder_name: "Second holder name", third_holder_name: "Third holder name",
   broking_code: "Broking code", dp_id: "DP ID", client_id: "Client ID", crn: "CRN", fund_name: "Fund name",
   folio_no: "Folio number", investor_name: "Investor name", wish_to_nominate: "Wish to nominate", form_date: "Form date",
 };

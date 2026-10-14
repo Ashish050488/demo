@@ -11,13 +11,19 @@ export function getEffectiveTickOption(baselineRecord, latestDecisions, { edited
 
 export function createBaselineValueReader(baselineRecords, latestDecisions, { editedField, editedValue } = {}) {
   const baselineByField = Object.fromEntries(baselineRecords.map((baselineRecord) => [baselineRecord.field, baselineRecord]));
-  return async function readBaselineValue(_field, fieldLabel) {
+  const readCorrectedValue = (fieldLabel) => {
     if (fieldLabel === editedField) return { value: editedValue };
     const decisionRow = latestDecisions[fieldLabel];
-    if (decisionRow?.decision === DECISION_KINDS.CORRECTED && decisionRow.value != null && decisionRow.value !== "") {
-      return { value: decisionRow.value, sourceFile: "reviewer" };
-    }
+    return decisionRow?.decision === DECISION_KINDS.CORRECTED && decisionRow.value != null && decisionRow.value !== ""
+      ? { value: decisionRow.value, sourceFile: "reviewer" } : null;
+  };
+  return async function readBaselineValue(_field, fieldLabel) {
+    const correctedValue = readCorrectedValue(fieldLabel);
+    if (correctedValue) return correctedValue;
     const baselineRecord = baselineByField[fieldLabel];
+    // A copied field ("same as investor name") follows a correction of the field it copies.
+    const sourceCorrection = baselineRecord?.copied_from && baselineRecord.source_file !== "batch sheet" ? readCorrectedValue(baselineRecord.copied_from) : null;
+    if (sourceCorrection) return { value: sourceCorrection.value, sourceFile: "copied" };
     return {
       value: baselineRecord?.value ?? null, confidence: baselineRecord?.ocr_confidence ?? null, sourceFile: baselineRecord?.source_file ?? null,
       skipReason: baselineRecord?.status !== "ok" ? baselineRecord?.reason : null,

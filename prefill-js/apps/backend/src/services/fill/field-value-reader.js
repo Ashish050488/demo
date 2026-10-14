@@ -7,7 +7,7 @@ const NOT_TYPED_REASON = "Not provided - type it here, or include it in the batc
 
 export function createFieldValueReader({
   caseEntry, formRules, fieldSources, profiles, profileKeyByField, getIdentityKind, documentsOfNominee,
-  formatTodayDate, onFlagged, checkValue,
+  formatTodayDate, onFlagged, checkValue, effectiveValues = {},
 }) {
   // Sheet values, with PAN values from memory (never stored on disk) on top.
   const typedValues = { ...(caseEntry.typedValues || {}), ...getTypedPanValues(caseEntry.id) };
@@ -59,6 +59,13 @@ export function createFieldValueReader({
       }
       if (sheetValue && !documentValue.notApplicable) return sheetValue;
       return documentValue;
+    }
+    if (fieldSource?.startsWith("copy.")) {
+      // "Same as another field" (e.g. page 2's first holder = investor name) unless this one was typed itself.
+      const copiedFrom = fieldSource.slice("copy.".length);
+      if (sheetValue) return { ...sheetValue, copiedFrom };
+      const copiedValue = effectiveValues[copiedFrom];
+      return copiedValue ? { value: String(copiedValue), sourceFile: "copied", copiedFrom } : { skipReason: NOT_TYPED_REASON, notProvided: true, copiedFrom };
     }
     if (sheetValue) return sheetValue;
     if (!fieldSource) return { skipReason: "not mapped to a source yet" };

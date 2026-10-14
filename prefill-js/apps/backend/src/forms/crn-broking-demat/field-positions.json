@@ -482,6 +482,24 @@
       "fontSize": 10,
       "type": "text",
       "note": "measured from the blank form text layer"
+    },
+    {
+      "key": "second_holder_name",
+      "nominee": null,
+      "page": 2,
+      "x": 155.35,
+      "y": 224.3,
+      "fontSize": 11,
+      "type": "text"
+    },
+    {
+      "key": "third_holder_name",
+      "nominee": null,
+      "page": 2,
+      "x": 155.35,
+      "y": 278.3,
+      "fontSize": 11,
+      "type": "text"
     }
   ]
 }

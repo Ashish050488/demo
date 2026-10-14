@@ -40,6 +40,8 @@
         "client_id",
         "crn",
         "applicant_name",
+        "second_holder_name",
+        "third_holder_name",
         "wish_to_nominate",
         "nominee_id_type"
       ]

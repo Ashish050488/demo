@@ -98,6 +98,7 @@ export function validateIdNumberFor(idType, value) {
 // Keyed by the field's base key (without the _n<nominee> suffix). Fields with no entry are free text.
 const VALIDATORS = {
   name: validateName, guardian_name: validateName, investor_name: validateName, applicant_name: validateName,
+  first_holder_name: validateName, second_holder_name: validateName, third_holder_name: validateName,
   dob: validateDob,
   id_aadhaar_last4: validateLast4, id_details: validateLast4,
   id_pan: validatePan, guardian_pan: validatePan,
@@ -112,6 +113,7 @@ const VALIDATORS = {
 export const RULE_TEXT = {
   name: "Letters only, each word 2+ letters", guardian_name: "Letters only, each word 2+ letters",
   investor_name: "Letters only, each word 2+ letters", applicant_name: "Letters only, each word 2+ letters",
+  first_holder_name: "Letters only, each word 2+ letters", second_holder_name: "Letters only, each word 2+ letters", third_holder_name: "Letters only, each word 2+ letters",
   dob: "DD/MM/YYYY, a real past date",
   id_aadhaar_last4: "Exactly 4 digits - never the full Aadhaar", id_details: "Exactly 4 digits - never the full Aadhaar",
   id_pan: "PAN: 5 letters + 4 digits + 1 letter", guardian_pan: "PAN: 5 letters + 4 digits + 1 letter",

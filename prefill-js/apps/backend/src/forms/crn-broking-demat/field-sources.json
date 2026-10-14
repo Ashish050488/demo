@@ -30,6 +30,8 @@
     "guardian_mobile": "typed",
     "guardian_email": "typed",
     "guardian_pan": "typed",
-    "guardian_id_type": "tick"
+    "guardian_id_type": "tick",
+    "second_holder_name": "typed",
+    "third_holder_name": "typed"
   }
 }

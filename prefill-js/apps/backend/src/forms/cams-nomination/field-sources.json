@@ -1,5 +1,5 @@
 {
-  "_about": "Form field -> where its value comes from. \"document.X\" = X read from the nominee's uploaded documents (see ../document-data-dictionary.json); \"typed\" = entered on the review screen or taken from a batch sheet; \"today\" = today's date; \"tick\" = a tick box chosen by rule or by the reviewer. The fill step reads this file directly.",
+  "_about": "Form field -> where its value comes from. \"document.X\" = X read from the nominee's uploaded documents (see ../document-data-dictionary.json); \"typed\" = entered on the review screen or taken from a batch sheet; \"today\" = today's date; \"copy.X\" = the same value as field X unless typed separately; \"tick\" = a tick box chosen by rule or by the reviewer. The fill step reads this file directly.",
   "fieldSources": {
     "fund_name": "typed",
     "folio_no": "typed",
@@ -20,6 +20,9 @@
     "pincode": "document.pincode",
     "mobile": "typed",
     "email": "typed",
-    "guardian_name": "typed"
+    "guardian_name": "typed",
+    "first_holder_name": "copy.investor_name",
+    "second_holder_name": "typed",
+    "third_holder_name": "typed"
   }
 }

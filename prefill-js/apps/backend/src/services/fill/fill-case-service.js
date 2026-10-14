@@ -64,7 +64,7 @@ export async function fillCase(caseEntry) {
   const flaggedReasons = {};
   const readFieldValue = createFieldValueReader({
     caseEntry, formRules, fieldSources, profiles, profileKeyByField, getIdentityKind, documentsOfNominee,
-    formatTodayDate, onFlagged: (fieldLabel, reason) => { flaggedReasons[fieldLabel] = reason; },
+    formatTodayDate, effectiveValues: overrides, onFlagged: (fieldLabel, reason) => { flaggedReasons[fieldLabel] = reason; },
     checkValue: (fieldKey, nomineeNumber, value) => (fieldKey === formRules.identityType.numberField
       ? validateIdNumberFor(optionByIdentityKind[getIdentityKind(nomineeNumber)], value)
       : validatorFor(fieldKey)?.(value)),

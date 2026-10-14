@@ -241,15 +241,6 @@
       "type": "multiline"
     },
     {
-      "key": "guardian_name",
-      "nominee": null,
-      "page": 2,
-      "x": 187.64,
-      "y": 227.61,
-      "fontSize": 12,
-      "type": "text"
-    },
-    {
       "key": "id_pan",
       "nominee": 1,
       "page": 1,
@@ -458,6 +449,60 @@
       "fontSize": 10,
       "type": "text",
       "note": "measured from the blank form text layer"
+    },
+    {
+      "key": "guardian_name",
+      "nominee": 1,
+      "page": 2,
+      "x": 187.64,
+      "y": 227.61,
+      "fontSize": 10,
+      "type": "text"
+    },
+    {
+      "key": "guardian_name",
+      "nominee": 2,
+      "page": 2,
+      "x": 315.49,
+      "y": 227.61,
+      "fontSize": 10,
+      "type": "text"
+    },
+    {
+      "key": "guardian_name",
+      "nominee": 3,
+      "page": 2,
+      "x": 443.34,
+      "y": 227.61,
+      "fontSize": 10,
+      "type": "text"
+    },
+    {
+      "key": "first_holder_name",
+      "nominee": null,
+      "page": 2,
+      "x": 205,
+      "y": 382.5,
+      "fontSize": 10,
+      "type": "text"
+    },
+    {
+      "key": "second_holder_name",
+      "nominee": null,
+      "page": 2,
+      "x": 205,
+      "y": 477,
+      "fontSize": 10,
+      "type": "text"
+    },
+    {
+      "key": "third_holder_name",
+      "nominee": null,
+      "page": 2,
+      "x": 205,
+      "y": 585,
+      "fontSize": 10,
+      "type": "text"
     }
   ]
 }

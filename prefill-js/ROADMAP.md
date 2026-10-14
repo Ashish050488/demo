@@ -141,7 +141,7 @@ our side: Ashish, Tushar). Their words are quoted where they matter.
 - Add a one-click "Swap Nominee 1 ↔ 2".
 - This answers Jyoti's question: "I want to make Japhia nominee one and Tushar nominee two".
 
-### [ ] 4. Map page-2 holder / witness fields
+### [x] 4. Map page-2 holder / witness fields
 **Headline:** fill the remaining unmapped boxes on the CRN/CAMS forms (holder names, witness).
 **Detail:**
 - Add positions to `forms/<form-id>/field-positions.json`, sources to `field-sources.json`, and sections to
