@@ -1,0 +1,104 @@
+{
+  "_about": "Every piece of data the app can read from an uploaded identity document. A form field maps to one of these as \"document.<key>\" in its field-sources.json.",
+  "documentData": {
+    "name": {
+      "means": "Full name",
+      "read_from": [
+        "Aadhaar front",
+        "PAN card",
+        "Passport",
+        "Driving licence"
+      ]
+    },
+    "dob": {
+      "means": "Date of birth (DD/MM/YYYY)",
+      "read_from": [
+        "Aadhaar front",
+        "PAN card",
+        "Passport",
+        "Driving licence"
+      ]
+    },
+    "street": {
+      "means": "Address without city/state/pincode",
+      "read_from": [
+        "Aadhaar back",
+        "Passport back",
+        "Driving licence"
+      ]
+    },
+    "city": {
+      "means": "City / district",
+      "read_from": [
+        "Aadhaar back",
+        "Passport back",
+        "Driving licence"
+      ]
+    },
+    "state": {
+      "means": "State",
+      "read_from": [
+        "Aadhaar back",
+        "Passport back",
+        "Driving licence"
+      ]
+    },
+    "stateCountry": {
+      "means": "State, India",
+      "read_from": [
+        "Aadhaar back",
+        "Passport back",
+        "Driving licence"
+      ]
+    },
+    "pincode": {
+      "means": "6-digit pincode",
+      "read_from": [
+        "Aadhaar back",
+        "Passport back",
+        "Driving licence"
+      ]
+    },
+    "country": {
+      "means": "Country (India when an Indian address was read)",
+      "read_from": [
+        "Aadhaar back",
+        "Passport back",
+        "Driving licence"
+      ]
+    },
+    "aadhaarLast4": {
+      "means": "Last 4 digits of Aadhaar (never the full number)",
+      "read_from": [
+        "Aadhaar"
+      ]
+    },
+    "pan": {
+      "means": "PAN number",
+      "read_from": [
+        "PAN card"
+      ]
+    },
+    "passport": {
+      "means": "Passport number",
+      "read_from": [
+        "Passport"
+      ]
+    },
+    "dl": {
+      "means": "Driving licence number",
+      "read_from": [
+        "Driving licence"
+      ]
+    },
+    "idNumber": {
+      "means": "Number of whichever ID type is ticked",
+      "read_from": [
+        "PAN card",
+        "Aadhaar",
+        "Passport",
+        "Driving licence"
+      ]
+    }
+  }
+}

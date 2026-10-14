@@ -1,9 +1,12 @@
-# personal data — never goes to git
+# personal data - never goes to git
 data/
 output/
 
-# downloaded language models (large binaries, re-downloadable; also never needed in git)
+# downloaded language models (large, re-downloadable)
 tessdata/
 
 node_modules/
+.next/
 *.log
+.env
+.env.local

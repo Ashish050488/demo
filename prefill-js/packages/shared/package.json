@@ -1,0 +1,13 @@
+{
+  "name": "@prefill/shared",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Code shared by the backend and the frontend: field validation, the whole-form check, field labels.",
+  "type": "module",
+  "main": "./src/index.js",
+  "types": "./src/index.d.ts",
+  "exports": {
+    ".": { "types": "./src/index.d.ts", "default": "./src/index.js" },
+    "./field-validation": "./src/field-validation.js"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "_about": "Form-level rules: how the form is recognised, which tab it saves to, and how its ID-type tick box works. Required fields are in required-fields.json (editable from the app).",
+  "formId": "cams-nomination",
+  "label": "CAMS Mutual Fund — Nomination",
+  "shortLabel": "CAMS Mutual Fund",
+  "sheetTabName": "CAMS Mutual Fund",
+  "detectionPhrases": ["Nomination Form", "Applicable for Individual Unitholders"],
+  "supportedNomineeCount": 2,
+  "identityType": {
+    "scope": "perNominee",
+    "tickboxField": "id_type",
+    "numberField": null,
+    "optionByIdentityKind": { "pan": "PAN", "aadhaarLast4": "Aadhaar (masked last 4 digits)", "passport": "Passport", "dl": "Driving License" },
+    "numberFieldByIdentityKind": { "pan": "id_pan", "aadhaarLast4": "id_details", "passport": "id_passport", "dl": "id_dl" }
+  }
+}

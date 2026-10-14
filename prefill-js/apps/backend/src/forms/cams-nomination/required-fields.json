@@ -1,0 +1,4 @@
+{
+  "_about": "Fields that must be filled before a case can be confirmed. Starts with what the printed form marks mandatory; changed from the Form setup screen. Per-nominee fields are listed without the _n<number> suffix.",
+  "requiredFields": ["fund_name", "folio_no", "investor_name", "name", "share_pct", "relationship_option", "id_type", "address", "city", "state_country", "pincode", "mobile", "email"]
+}

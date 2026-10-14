@@ -1,0 +1,25 @@
+{
+  "_about": "Form field -> where its value comes from. \"document.X\" = X read from the nominee's uploaded documents (see ../document-data-dictionary.json); \"typed\" = entered on the review screen or taken from a batch sheet; \"today\" = today's date; \"tick\" = a tick box chosen by rule or by the reviewer. The fill step reads this file directly.",
+  "fieldSources": {
+    "fund_name": "typed",
+    "folio_no": "typed",
+    "investor_name": "typed",
+    "name": "document.name",
+    "share_pct": "typed",
+    "dob": "document.dob",
+    "relationship_option": "tick",
+    "relationship_other": "typed",
+    "id_type": "tick",
+    "id_pan": "document.pan",
+    "id_details": "document.aadhaarLast4",
+    "id_passport": "document.passport",
+    "id_dl": "document.dl",
+    "address": "document.street",
+    "city": "document.city",
+    "state_country": "document.stateCountry",
+    "pincode": "document.pincode",
+    "mobile": "typed",
+    "email": "typed",
+    "guardian_name": "typed"
+  }
+}

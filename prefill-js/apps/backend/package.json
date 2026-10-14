@@ -1,0 +1,23 @@
+{
+  "name": "@prefill/backend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Backend API: reads identity documents (local OCR), fills the nomination PDFs, saves confirmed cases to Google Sheets.",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js"
+  },
+  "dependencies": {
+    "@gutenye/ocr-node": "^1.4.9",
+    "@prefill/shared": "workspace:*",
+    "canvas": "^3.2.3",
+    "express": "^5.3.0",
+    "jsqr": "^1.4.0",
+    "multer": "^2.4.0",
+    "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^4.7.76",
+    "tesseract.js": "^5.1.1",
+    "zxing-wasm": "^3.1.5"
+  }
+}
