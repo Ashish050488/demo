@@ -6,6 +6,7 @@
   "packageManager": "pnpm@12.4.1",
   "scripts": {
     "dev": "pnpm --parallel --filter @prefill/backend --filter @prefill/frontend dev",
+    "demo": "pnpm --parallel --filter @prefill/backend --filter @prefill/frontend demo",
     "dev:backend": "pnpm --filter @prefill/backend dev",
     "dev:frontend": "pnpm --filter @prefill/frontend dev",
     "build": "pnpm --filter @prefill/frontend build"

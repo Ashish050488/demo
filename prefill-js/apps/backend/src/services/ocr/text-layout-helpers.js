@@ -95,3 +95,56 @@ export function stripLeadingIndexDigit(line) {
   }
   return line;
 }
+
+/** One field's value from several OCR passes. Readings with the same letters and digits count as one answer;
+ * the answer most passes agree on wins (confidence only breaks a tie) - verified on a PAN where PaddleOCR read
+ * "MPEPJ8821K" at 95% while both Tesseract passes read the true "MPFPJ8821K". Within the winning answer the
+ * reading that kept word spaces is used (PaddleOCR often glues words: "RAHULMEHTA" vs "RAHUL MEHTA"). */
+export function pickBestReading(readings) {
+  const found = readings.filter((reading) => reading?.value);
+  if (!found.length) return null;
+  // Grouping key only (never the value kept): letters and digits, with the classic look-alikes folded together, so
+  // "S/O: SURESH" and "S/0: SURESH" count as the same answer. A real letter difference (PAN "F" vs "E") stays apart.
+  const LOOK_ALIKES = { 0: "O", 1: "I", 5: "S", $: "S", 8: "B" };
+  const lettersAndDigits = (value) => String(value).toUpperCase().replace(/[0158$]/g, (character) => LOOK_ALIKES[character]).replace(/[^A-Z0-9]/g, "");
+  const spaceCount = (value) => (String(value).match(/\s/g) || []).length;
+  const groups = new Map();
+  for (const reading of found) {
+    const key = lettersAndDigits(reading.value);
+    groups.set(key, [...(groups.get(key) || []), reading]);
+  }
+  const topConfidence = (group) => Math.max(...group.map((reading) => reading.confidence ?? 0));
+  // No two passes agree exactly: the reading closest to all the others (consensus), confidence breaking a tie -
+  // verified on a side-by-side e-Aadhaar where PaddleOCR merged both cards at 96% and two Tesseract passes
+  // each differed from the truth by one character.
+  const consensus = (group) => [...groups.keys()].reduce((sum, key) => sum + similarity(key, lettersAndDigits(group[0].value)), 0);
+  const winningGroup = [...groups.values()].reduce((winner, group) => {
+    if (group.length !== winner.length) return group.length > winner.length ? group : winner;
+    const consensusDifference = consensus(group) - consensus(winner);
+    return consensusDifference > 0.01 || (Math.abs(consensusDifference) <= 0.01 && topConfidence(group) > topConfidence(winner)) ? group : winner;
+  });
+  // Same letters, but one reading may carry OCR specks ("Bihar - 801301, ?"): fewest specks first, then most spaces.
+  // Ordinary punctuation ("MAHARASHTRA - 400006", "S/O") is not a speck.
+  const strayCount = (value) => String(value).split(/[\s,]+/).filter((token) => token && !/[A-Za-z0-9]/.test(token) && /[^-/&.:]/.test(token)).length;
+  const spaced = winningGroup.reduce((most, reading) => {
+    const strayDifference = strayCount(reading.value) - strayCount(most.value);
+    return strayDifference < 0 || (strayDifference === 0 && spaceCount(reading.value) > spaceCount(most.value)) ? reading : most;
+  });
+  return { ...spaced, confidence: topConfidence(winningGroup) };
+}
+
+/** 1 for equal strings, 0 for nothing in common (1 - edit distance / longer length). */
+function similarity(first, second) {
+  if (first === second) return 1;
+  const longer = Math.max(first.length, second.length);
+  if (!longer) return 1;
+  let previous = Array.from({ length: second.length + 1 }, (_unused, index) => index);
+  for (let row = 1; row <= first.length; row++) {
+    const current = [row];
+    for (let column = 1; column <= second.length; column++) {
+      current[column] = Math.min(previous[column] + 1, current[column - 1] + 1, previous[column - 1] + (first[row - 1] === second[column - 1] ? 0 : 1));
+    }
+    previous = current;
+  }
+  return 1 - previous[second.length] / longer;
+}

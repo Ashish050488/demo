@@ -13,6 +13,7 @@ batchesRouter.get("/", batchesController.handleListBatches);
 batchesRouter.post("/", sheetUpload.single("file"), batchesController.handleCreateBatch);
 batchesRouter.get("/:batchId", requireBatch, batchesController.handleGetBatch);
 batchesRouter.post("/:batchId/start", requireBatch, batchesController.handleStartBatch);
+batchesRouter.post("/:batchId/sheet-import", requireBatch, sheetUpload.single("file"), batchesController.handleImportBatchSheet);
 batchesRouter.get("/:batchId/events", requireBatch, batchesController.handleBatchEvents);
 batchesRouter.get("/:batchId/pdfs", requireBatch, batchesController.handleDownloadBatchZip);
 batchesRouter.delete("/:batchId", requireBatch, batchesController.handleDeleteBatch);

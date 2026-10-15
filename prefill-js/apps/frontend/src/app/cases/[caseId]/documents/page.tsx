@@ -2,7 +2,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { isSignatureFile, uploadSignature } from "@/api/signature-api";
 import { useEffect, useState } from "react";
-import { assignDocument, fillCase, removeDocument, swapNominees, uploadDocuments } from "@/api/cases-api";
+import { assignDocument, fillCase, removeCaseSheet, removeDocument, swapNominees, uploadDocuments } from "@/api/cases-api";
 import { fetchFormRules } from "@/api/forms-api";
 import CaseStepper from "@/components/cases/CaseStepper";
 import DocumentCard from "@/components/cases/DocumentCard";
@@ -11,6 +11,7 @@ import NomineeDocumentGroup, { listPersonNames } from "@/components/cases/Nomine
 import Button from "@/components/ui/Button";
 import Notice from "@/components/ui/Notice";
 import PageContainer from "@/components/ui/PageContainer";
+import SheetImportDialog from "@/components/review/SheetImportDialog";
 import StatusState from "@/components/ui/StatusState";
 import { isSamePersonName } from "@prefill/shared";
 import { useCaseSummary } from "@/hooks/useCaseSummary";
@@ -18,6 +19,7 @@ import type { CaseDocument } from "@/types/cases";
 import type { FormRules } from "@/types/forms";
 
 const MAXIMUM_NOMINEE_COUNT = 3;
+const isSheetFile = (chosenFile: File) => /\.(xlsx|csv)$/i.test(chosenFile.name);
 
 export default function CaseDocumentsPage() {
   const { caseId } = useParams<{ caseId: string }>();
@@ -27,6 +29,21 @@ export default function CaseDocumentsPage() {
   const [isFilling, setIsFilling] = useState(false);
   const [isSwapping, setIsSwapping] = useState(false);
   const [formRules, setFormRules] = useState<FormRules | null>(null);
+  const [isSheetImportOpen, setIsSheetImportOpen] = useState(false);
+  const [sheetFileToImport, setSheetFileToImport] = useState<File | null>(null);
+  const [isRemovingSheet, setIsRemovingSheet] = useState(false);
+  const sheetImport = caseSummary?.sheetImport ?? null;
+
+  async function handleRemoveSheet() {
+    setIsRemovingSheet(true);
+    try {
+      await removeCaseSheet(caseId);
+    } catch (error) {
+      setUploadMessages([(error as Error).message]);
+    }
+    await reloadCase();
+    setIsRemovingSheet(false);
+  }
   const formId = caseSummary?.formId;
   useEffect(() => { if (formId) fetchFormRules(formId).then(setFormRules).catch(() => setFormRules(null)); }, [formId]);
   // A one-person form (subscription, W-8BEN): every document is that person's - one group, its own word for them.
@@ -34,7 +51,13 @@ export default function CaseDocumentsPage() {
   const personLabel = formRules?.personLabel || "Nominee";
   const isOnePersonForm = maximumNomineeCount === 1;
 
-  async function handleFilesChosen(documentFiles: File[], relativePaths: string[]) {
+  async function handleFilesChosen(chosenFiles: File[], chosenPaths: string[]) {
+    // The client's Excel goes to "Fill from Excel" (pick the row, see the report); the rest are documents.
+    const sheetFile = chosenFiles.find(isSheetFile);
+    if (sheetFile) { setSheetFileToImport(sheetFile); setIsSheetImportOpen(true); }
+    const documentFiles = chosenFiles.filter((chosenFile) => !isSheetFile(chosenFile));
+    const relativePaths = chosenPaths.filter((_path, index) => !isSheetFile(chosenFiles[index]));
+    if (!documentFiles.length) return;
     try {
       // A "signature" image is the client's signature (placed on the form's signature lines), not an ID to read.
       const signatureFile = documentFiles.find(isSignatureFile);
@@ -119,6 +142,13 @@ export default function CaseDocumentsPage() {
       <div className="grid h-full gap-5 lg:grid-cols-[minmax(320px,1fr)_minmax(0,2fr)]">
         <div className="space-y-4">
           <DocumentDropZone onFilesChosen={handleFilesChosen} />
+          <div className="flex items-center gap-2 rounded-xl border border-line bg-white px-4 py-2.5 text-sm">
+            <span className="min-w-0 flex-1 truncate text-muted" title={sheetImport?.fileName}>{sheetImport
+              ? <>Excel: <b className="text-ink">{sheetImport.fileName}</b> · row {sheetImport.rowNumber}{sheetImport.clientReference ? ` · ${sheetImport.clientReference}` : ""}</>
+              : "Excel (bank, amount, contact…): not added yet"}</span>
+            <Button size="small" onClick={() => { setSheetFileToImport(null); setIsSheetImportOpen(true); }}>{sheetImport ? "Change" : "Fill from Excel"}</Button>
+            {sheetImport ? <Button size="small" variant="ghost" disabled={isRemovingSheet} onClick={handleRemoveSheet}>{isRemovingSheet ? "Removing…" : "Remove"}</Button> : null}
+          </div>
           {loadError ? <Notice tone="error">{loadError}</Notice> : null}
           {uploadMessages.length ? <Notice tone="error">{uploadMessages.map((message) => <div key={message}>{message}</div>)}</Notice> : null}
         </div>
@@ -149,6 +179,11 @@ export default function CaseDocumentsPage() {
           </div>
         </section>
       </div>
+      {formId ? (
+        <SheetImportDialog caseId={caseId} formId={formId} isOpen={isSheetImportOpen} initialFile={sheetFileToImport}
+          onClose={() => { setIsSheetImportOpen(false); setSheetFileToImport(null); }}
+          onImported={reloadCase} />
+      ) : null}
     </PageContainer>
   );
 }

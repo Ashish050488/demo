@@ -6,8 +6,8 @@ import { writeFile, mkdtemp, readFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { createWorker, PSM } from "tesseract.js";
 
-import { rasterizeFirstPage, rasterizeImageFile, renderPage } from "../pdf/render-page-service.js";
-import { groupIntoLines } from "./text-layout-helpers.js";
+import { rasterizeScanPages, rasterizeImageFile } from "../pdf/render-page-service.js";
+import { groupIntoLines, pickBestReading } from "./text-layout-helpers.js";
 import { extractFields as extractAadhaarFields } from "../documents/aadhaar-extract-service.js";
 import { detectLines as paddleDetectLines } from "./paddle-ocr-service.js";
 
@@ -48,10 +48,12 @@ export async function readScanText(worker, scanPath) {
 
 async function ocrScanUncached(worker, scanPath) {
   const ext = path.extname(scanPath).toLowerCase();
-  const { png } = IMAGE_EXTENSIONS.has(ext)
+  // A PDF is read over its first 2 pages (front + back scanned as separate pages).
+  const { png, plainPng } = IMAGE_EXTENSIONS.has(ext)
     ? await rasterizeImageFile(scanPath)
-    : await rasterizeFirstPage(scanPath, { scale: 3.0 });
-  let best = {};
+    : await rasterizeScanPages(scanPath, { scale: 3.0 });
+  const FIELD_KEYS = ["name", "dob", "address", "aadhaarLast4", "gender"];
+  const fieldsByPass = [];
   let rawText = "";
   const linesByPass = [];
   for (const psm of [PSM.SINGLE_BLOCK, PSM.SPARSE_TEXT]) {
@@ -60,23 +62,23 @@ async function ocrScanUncached(worker, scanPath) {
     rawText += `\n${data.text || ""}`;
     const lines = groupIntoLines(data.words);
     linesByPass.push(lines);
-    const fields = extractAadhaarFields(lines);
-    for (const k of ["name", "dob", "address", "aadhaarLast4", "gender"]) {
-      if (fields[k] && (!best[k] || fields[k].confidence > best[k].confidence)) best[k] = fields[k];
-    }
+    fieldsByPass.push(extractAadhaarFields(lines));
   }
 
   try {
-    const paddleInputPath = IMAGE_EXTENSIONS.has(ext) ? scanPath : await toTempPng((await renderPage(scanPath, 1, { scale: 3.0 })).png);
+    const paddleInputPath = IMAGE_EXTENSIONS.has(ext) ? scanPath : await toTempPng(plainPng);
     const paddleLines = await paddleDetectLines(paddleInputPath);
     linesByPass.push(paddleLines);
     rawText += `\n${paddleLines.map((l) => l.text).join("\n")}`;
-    const paddleFields = extractAadhaarFields(paddleLines);
-    for (const k of ["name", "dob", "address", "aadhaarLast4", "gender"]) {
-      if (paddleFields[k] && (!best[k] || paddleFields[k].confidence > best[k].confidence)) best[k] = paddleFields[k];
-    }
+    fieldsByPass.push(extractAadhaarFields(paddleLines));
   } catch (err) {
     console.error("PaddleOCR pass failed, continuing with Tesseract-only result:", err.message);
+  }
+  // Most confident reading per field, keeping word spaces another pass saw (see pickBestReading).
+  const best = {};
+  for (const key of FIELD_KEYS) {
+    const reading = pickBestReading(fieldsByPass.map((fields) => fields[key]));
+    if (reading) best[key] = reading;
   }
 
   return { fields: best, rawText, linesByPass };

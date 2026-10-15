@@ -9,6 +9,8 @@ interface FileDropZoneProps {
   isMultiple?: boolean;
   /** Also accept whole folders (drop or "Choose folder"); each file keeps its folder path. */
   isFolderAllowed?: boolean;
+  /** One "Choose folder" button only: pick the folder of client folders once and every file inside comes in. */
+  isFolderOnly?: boolean;
   maximumFileCount?: number;
   title: string;
   hint?: ReactNode;
@@ -23,23 +25,29 @@ const hasAllowedExtension = (chosenFile: File, allowedExtensions: string[]) =>
 
 /** Drag-and-drop area with a "Choose" button; rejects wrong file types and extra files with a clear message. */
 export default function FileDropZone(props: FileDropZoneProps) {
-  const { allowedExtensions, isMultiple = false, isFolderAllowed = false, maximumFileCount = isMultiple ? 10 : 1, title, hint, buttonLabel = "Choose file", isDisabled = false, isCompact = false, onFilesChosen } = props;
+  const { allowedExtensions, isMultiple = false, isFolderAllowed = false, isFolderOnly = false, maximumFileCount = isMultiple ? 10 : 1, title, hint, buttonLabel = "Choose file", isDisabled = false, isCompact = false, onFilesChosen } = props;
   const fileInput = useRef<HTMLInputElement>(null);
   const folderInput = useRef<HTMLInputElement>(null);
   const dragDepth = useRef(0); // dragenter/leave fire for every child element - count them so the highlight doesn't flicker
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [rejectionMessage, setRejectionMessage] = useState<string | null>(null);
+  const [isQuietMessage, setIsQuietMessage] = useState(false);
 
   const handleFiles = (allFiles: ChosenFile[]) => {
     if (!allFiles.length || isDisabled) return;
     const allowedFiles = allFiles.filter((chosenFile) => hasAllowedExtension(chosenFile.file, allowedExtensions));
-    const rejectedNames = allFiles.filter((chosenFile) => !allowedFiles.includes(chosenFile)).map((chosenFile) => chosenFile.file.name);
+    const rejectedFiles = allFiles.filter((chosenFile) => !allowedFiles.includes(chosenFile));
+    const rejectedNames = rejectedFiles.map((chosenFile) => chosenFile.file.name);
+    // Inside a chosen folder, a note or readme next to the documents is expected - ignored quietly, not a warning.
+    const isOnlyFolderExtras = rejectedFiles.length > 0 && rejectedFiles.every((chosenFile) => chosenFile.relativePath.includes("/"));
     const acceptedFiles = allowedFiles.slice(0, maximumFileCount);
     const messages = [];
-    if (rejectedNames.length) messages.push(`Skipped (only ${allowedExtensions.join(", ")}): ${rejectedNames.slice(0, 5).join(", ")}${rejectedNames.length > 5 ? ` and ${rejectedNames.length - 5} more` : ""}`);
+    if (isOnlyFolderExtras) messages.push(`Not documents, left out: ${rejectedNames.slice(0, 5).join(", ")}${rejectedNames.length > 5 ? ` and ${rejectedNames.length - 5} more` : ""}`);
+    else if (rejectedNames.length) messages.push(`Skipped (only ${allowedExtensions.join(", ")}): ${rejectedNames.slice(0, 5).join(", ")}${rejectedNames.length > 5 ? ` and ${rejectedNames.length - 5} more` : ""}`);
     if (allowedFiles.length > maximumFileCount) messages.push(maximumFileCount === 1 ? `Only one file at a time - using ${acceptedFiles[0].file.name}` : `Only ${maximumFileCount} files at a time - the rest were skipped`);
     if (!allowedFiles.length && !rejectedNames.length) messages.push("That folder is empty");
     setRejectionMessage(messages.length ? messages.join(". ") : null);
+    setIsQuietMessage(isOnlyFolderExtras && messages.length === 1);
     if (acceptedFiles.length) onFilesChosen(acceptedFiles.map((chosenFile) => chosenFile.file), acceptedFiles.map((chosenFile) => chosenFile.relativePath));
   };
 
@@ -59,8 +67,9 @@ export default function FileDropZone(props: FileDropZoneProps) {
         <p className="text-sm font-medium">{isDraggingOver ? "Drop to upload" : title}</p>
         {hint ? <p className="mt-1 text-xs text-muted">{hint}</p> : null}
         <div className="mt-3 flex justify-center gap-2">
-          <Button disabled={isDisabled} onClick={() => fileInput.current?.click()}>{buttonLabel}</Button>
-          {isFolderAllowed ? <Button variant="ghost" disabled={isDisabled} onClick={() => folderInput.current?.click()}>Choose folder</Button> : null}
+          {isFolderOnly ? <Button disabled={isDisabled} onClick={() => folderInput.current?.click()}>Choose folder</Button>
+            : <Button disabled={isDisabled} onClick={() => fileInput.current?.click()}>{buttonLabel}</Button>}
+          {isFolderAllowed && !isFolderOnly ? <Button variant="ghost" disabled={isDisabled} onClick={() => folderInput.current?.click()}>Choose folder</Button> : null}
         </div>
         <input ref={fileInput} type="file" accept={allowedExtensions.join(",")} multiple={isMultiple} hidden
           onChange={(event) => { handleFiles(readInputFiles(event.target.files)); event.target.value = ""; }} />
@@ -69,7 +78,7 @@ export default function FileDropZone(props: FileDropZoneProps) {
             onChange={(event) => { handleFiles(readInputFiles(event.target.files)); event.target.value = ""; }} />
         ) : null}
       </div>
-      {rejectionMessage ? <p className="mt-2 text-xs text-amber-800">{rejectionMessage}</p> : null}
+      {rejectionMessage ? <p className={`mt-2 text-xs ${isQuietMessage ? "text-muted" : "text-amber-800"}`}>{rejectionMessage}</p> : null}
     </div>
   );
 }

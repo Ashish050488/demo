@@ -47,12 +47,26 @@ function addClientsSheet(workbook, batchColumns) {
   });
   headingRow.height = 44;
 
+  // Excel rejects a typed dropdown list over 255 characters (or with a comma inside an option): the whole file then
+  // opens with "We found a problem with some content". Those lists live on a hidden "Lists" sheet instead.
+  let listsSheet = null;
+  let listsColumnCount = 0;
+  const listRangeFor = (options) => {
+    listsSheet ||= workbook.addWorksheet("Lists", { state: "hidden" });
+    listsColumnCount += 1;
+    options.forEach((option, optionIndex) => { listsSheet.getRow(optionIndex + 1).getCell(listsColumnCount).value = option; });
+    const columnLetter = listsSheet.getColumn(listsColumnCount).letter;
+    return `Lists!$${columnLetter}$1:$${columnLetter}$${options.length}`;
+  };
   batchColumns.forEach((batchColumn, index) => {
     if (!batchColumn.options) return;
-    const allowedValues = `"${batchColumn.options.join(",").replace(/"/g, "")}"`;
+    const typedList = `"${batchColumn.options.join(",").replace(/"/g, "")}"`;
+    const allowedValues = typedList.length > 255 || batchColumn.options.some((option) => option.includes(",")) ? listRangeFor(batchColumn.options) : typedList;
     for (let rowNumber = FIRST_DATA_ROW_NUMBER; rowNumber < FIRST_DATA_ROW_NUMBER + TEMPLATE_DATA_ROW_COUNT; rowNumber += 1) {
       clientsSheet.getRow(rowNumber).getCell(index + 1).dataValidation = {
-        type: "list", allowBlank: true, formulae: [allowedValues], showErrorMessage: true, errorTitle: "Not an allowed value", error: batchColumn.rule,
+        // Excel caps the message at 255 characters (longer -> it calls the file damaged); a long list says "pick from the list".
+        type: "list", allowBlank: true, formulae: [allowedValues], showErrorMessage: true, errorTitle: "Not an allowed value",
+        error: batchColumn.rule.length <= 255 ? batchColumn.rule : "Pick one of the values in this column's dropdown list",
       };
     }
   });

@@ -108,7 +108,7 @@ export default function CaseReviewPage() {
   }
 
   if (session.loadError) {
-    return <StatusState tone="error" title="This case could not be opened" message={session.loadError} actionLabel="Try again" onAction={() => session.reloadFields(true)} />;
+    return <StatusState tone="error" title="This case could not be opened" message={session.loadError} actionLabel="Try again" onAction={() => session.reloadFields("ifNotFilled")} />;
   }
   if (!fieldsView || !formRules) return <ReviewPageSkeleton />;
   if (!activeSection) return <StatusState title="No fields to review" message="This form has no fields set up yet - check Form setup." />;
@@ -180,7 +180,7 @@ export default function CaseReviewPage() {
       </div>
       <SourceDocumentDialog caseId={caseId} caseField={sourceField} caseDocuments={session.caseSummary?.documents || []} onClose={() => setSourceField(null)} />
       <AddDocumentDialog caseId={caseId} nomineeNumber={addDocumentNominee} onClose={() => setAddDocumentNominee(null)} onDocumentsRead={() => session.reloadFields(true)} />
-      <SheetImportDialog caseId={caseId} formId={fieldsView.formId} isOpen={isSheetImportOpen} onClose={() => setIsSheetImportOpen(false)} onImported={() => session.reloadFields(true)} />
+      <SheetImportDialog caseId={caseId} formId={fieldsView.formId} batchId={session.caseSummary?.batchId} isOpen={isSheetImportOpen} onClose={() => setIsSheetImportOpen(false)} onImported={() => session.reloadFields(true)} />
       <RequiredFieldsDrawer session={session} sections={sections} isOpen={isRequiredDrawerOpen} onClose={() => setIsRequiredDrawerOpen(false)} onJumpToField={goToField} onChooseTick={handleChooseTick} />
       <BlockedFieldsDialog blockedFields={blockedFields} getSectionLabel={getSectionLabel} onClose={() => setBlockedFields([])} onJumpToField={(fieldKey) => { setBlockedFields([]); goToField(fieldKey); }} />
     </div>

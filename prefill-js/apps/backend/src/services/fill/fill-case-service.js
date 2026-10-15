@@ -36,7 +36,8 @@ export async function fillCase(caseEntry) {
   if (!formDefinition) throw new Error(`unsupported form "${caseEntry.formId}"`);
   const [fieldPositions, fieldSources, formRules] = await Promise.all([
     fetchFieldPositions(caseEntry.formId), fetchFieldSources(caseEntry.formId), fetchFormRules(caseEntry.formId)]);
-  const overrides = { ...(caseEntry.typedValues || {}), ...getTypedPanValues(caseEntry.id), ...(await fetchCorrectedValues(caseEntry.id)) };
+  const correctedValues = await fetchCorrectedValues(caseEntry.id);
+  const overrides = { ...(caseEntry.typedValues || {}), ...getTypedPanValues(caseEntry.id), ...correctedValues };
 
   await rereadMissingIdentityDocuments(caseEntry);
   const nomineeNumbers = Array.from({ length: formRules.supportedNomineeCount }, (_unused, index) => index + 1);
@@ -81,7 +82,12 @@ export async function fillCase(caseEntry) {
   }
 
   const anyNomineeAadhaarLast4 = nomineeNumbers.some((nomineeNumber) => profiles[nomineeNumber]?.aadhaarLast4);
-  results.push(...formDefinition.applyTickboxes(pages, formDefinition.formConfiguration, { anyNomineeAadhaarLast4, idTypes, overrides }));
+  const tickResults = formDefinition.applyTickboxes(pages, formDefinition.formConfiguration, { anyNomineeAadhaarLast4, idTypes, overrides });
+  // A tick answered in the Excel shows "batch sheet", like the Excel's text values; one changed on review, "reviewer".
+  for (const tickResult of tickResults) {
+    if (tickResult.source_file === "typed") tickResult.source_file = correctedValues[tickResult.field] != null ? "reviewer" : "batch sheet";
+  }
+  results.push(...tickResults);
   await drawSignatures(pdfDoc, pages, formDefinition.formConfiguration, caseEntry.id);
 
   await mkdir(path.dirname(getFilledPdfPath(caseEntry.id)), { recursive: true });
@@ -92,7 +98,8 @@ export async function fillCase(caseEntry) {
 
 /** Which document a value came from, for the review screen's "from Aadhaar · view" chip. */
 function attachSourceDocument(fieldResult, { profiles, profileKeyByField, getIdentityKind, numberField }) {
-  const match = fieldResult.field.match(/^(.*)_n(\d)$/);
+  // "name_n2" -> nominee 2; a one-person form's field ("subscriber_name") reads the person in slot 1.
+  const match = fieldResult.field.match(/^(.*)_n(\d)$/) || (profileKeyByField[fieldResult.field] ? [null, fieldResult.field, "1"] : null);
   if (!match || fieldResult.value == null || fieldResult.source_file) return;
   const nomineeNumber = Number(match[2]);
   const profileKey = match[1] === numberField ? getIdentityKind(nomineeNumber) : profileKeyByField[match[1]];

@@ -46,7 +46,7 @@ export default function BatchMatchTable({ batch, clients, folderMatch, isDisable
                 <tr key={client.caseId}>
                   <td className="px-4 py-2 tabular-nums text-muted">{client.rowNumber}</td>
                   <td className="py-2 font-medium">{client.clientReference || "-"}</td>
-                  <td className="max-w-[12rem] truncate py-2">{client.displayName || <span className="text-muted">-</span>}</td>
+                  <td className="max-w-[12rem] truncate py-2">{client.displayName || <span className="text-muted">From documents</span>}</td>
                   <td className="py-2">
                     <div className="flex items-center gap-2">
                       {clientFiles ? <span className="text-emerald-700" title={clientFiles.relativePaths.join("\n")}>{clientFiles.files.length} file{clientFiles.files.length === 1 ? "" : "s"}</span> : <span className="text-muted">Excel only</span>}

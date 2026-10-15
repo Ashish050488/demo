@@ -8,6 +8,7 @@ import { getCase, deleteCase, getRegeneratedPdfPath } from "../../services/stora
 import { deleteIdentityRecord, deleteTypedPanValues } from "../../services/documents/identity-number-memory-service.js";
 import { SheetFileError } from "../../services/batch/read-sheet-file-service.js";
 import { createBatchFromSheet } from "../../services/batch/create-batch-service.js";
+import { importSheetIntoBatch } from "../../services/batch/import-case-sheet-service.js";
 import { buildBatchStatus, CLIENT_STAGES } from "../../services/batch/batch-status-service.js";
 import { regenerateCasePdf } from "../../services/fill/regenerate-case-pdf-service.js";
 
@@ -111,4 +112,24 @@ export async function handleDeleteBatch(request, response) {
   }
   await deleteBatch(request.batchEntry.id);
   sendData(response, { batchId: request.batchEntry.id });
+}
+
+// POST /api/batches/:batchId/sheet-import - a corrected Excel for the whole batch: each client takes its own row.
+export async function handleImportBatchSheet(request, response) {
+  if (!request.file) throw new ApiError(400, ERROR_CODES.INVALID_REQUEST, "No file uploaded");
+  const batchCases = (await Promise.all(request.batchEntry.rows.map((batchRow) => getCase(batchRow.caseId)))).filter(Boolean);
+  // A batch with several forms: each form reads the Excel its own way.
+  const summary = { updatedCount: 0, notInFile: [], alreadySaved: [] };
+  try {
+    for (const formId of new Set(batchCases.map((caseEntry) => caseEntry.formId))) {
+      const formSummary = await importSheetIntoBatch(batchCases.filter((caseEntry) => caseEntry.formId === formId), request.file.buffer, request.file.originalname);
+      summary.updatedCount += formSummary.updatedCount;
+      summary.notInFile.push(...formSummary.notInFile.filter((reference) => !summary.notInFile.includes(reference)));
+      summary.alreadySaved.push(...formSummary.alreadySaved.filter((reference) => !summary.alreadySaved.includes(reference)));
+    }
+    sendData(response, summary);
+  } catch (error) {
+    if (error instanceof SheetFileError) throw new ApiError(422, "SHEET_NOT_USABLE", error.message);
+    throw error;
+  }
 }

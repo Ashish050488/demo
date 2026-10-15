@@ -25,6 +25,7 @@ export interface CaseSummary {
   /** From the Excel, else read from the client's documents; null until either exists. */
   clientName: string | null;
   isFilled: boolean;
+  sheetImport?: { fileName: string; rowNumber: number; clientReference: string | null } | null;
   confirmedAt: string | null;
   documents: CaseDocument[];
 }

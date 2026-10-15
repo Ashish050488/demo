@@ -1,14 +1,12 @@
 // Reads one saved upload in the background: OCR, classify, keep what it shows, then regroup the case by person.
 // Failures land in the case store as status "error", never as an unhandled rejection.
-import { createEnglishOcrWorker, readScanText } from "../ocr/scan-ocr-service.js";
-import { hasDecodableQr } from "../ocr/qr-detect-service.js";
+import { readScanTextInBackground } from "../ocr/scan-ocr-pool-service.js";
 import { classifyDocument, AADHAAR_DOC_TYPES, UNSUPPORTED_DOC_MESSAGE } from "./classify-document-service.js";
 import { maskPan } from "./pan-extract-service.js";
 import { buildIdentityRecord } from "./read-identity-document-service.js";
 import { storeIdentityRecord } from "./identity-number-memory-service.js";
 import { groupCaseDocuments } from "./group-documents-service.js";
 import { updateCaseDocument } from "../storage/case-store-service.js";
-import { TESSDATA_DIRECTORY } from "../../config/paths-config.js";
 
 export const DOCUMENT_STATUSES = { PROCESSING: "processing", DONE: "done", UNRECOGNIZED: "unrecognized", ERROR: "error" };
 
@@ -59,11 +57,9 @@ export function processUploadedDocument(caseId, documentId, filePath) {
 }
 
 async function readOneDocument(caseId, documentId, filePath) {
-  const worker = await createEnglishOcrWorker(TESSDATA_DIRECTORY);
   try {
-    const { fields, rawText, linesByPass } = await readScanText(worker, filePath);
+    const { fields, rawText, linesByPass, hasQrCode } = await readScanTextInBackground(filePath);
     const documentType = classifyDocument({ fields, rawText });
-    const hasQrCode = await hasDecodableQr(filePath).catch(() => false);
     const identityRecord = buildIdentityRecord(documentType, linesByPass); // PAN / passport / DL -> memory only
     if (identityRecord) storeIdentityRecord(documentId, identityRecord);
     const panRecord = documentType === "pan" ? identityRecord : null;
@@ -77,9 +73,11 @@ async function readOneDocument(caseId, documentId, filePath) {
     });
     await groupCaseDocuments(caseId).catch((error) => console.error("grouping documents failed:", error.message));
   } catch (error) {
-    await updateCaseDocument(caseId, documentId, { status: DOCUMENT_STATUSES.ERROR, message: "Reading this document failed" });
+    // e-Aadhaar / e-PAN downloads are password-protected PDFs: say so, instead of a bare "failed".
+    const message = error?.name === "PasswordException"
+      ? "This PDF is password-protected - open it (e-Aadhaar password: first 4 letters of the name in capitals + birth year), save a copy without the password, and upload that"
+      : "Reading this document failed";
+    await updateCaseDocument(caseId, documentId, { status: DOCUMENT_STATUSES.ERROR, message });
     console.error(`document OCR failed (case ${caseId}, document ${documentId}):`, error.message);
-  } finally {
-    await worker.terminate();
   }
 }

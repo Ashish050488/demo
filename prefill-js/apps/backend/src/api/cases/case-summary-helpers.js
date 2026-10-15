@@ -45,6 +45,8 @@ export function toCaseSummary(caseEntry) {
   return {
     id: caseEntry.id, formId: caseEntry.formId, batchId: caseEntry.batchId || null, createdAt: caseEntry.createdAt, clientName: findClientName(caseEntry),
     isFilled: Boolean(caseEntry.isFilled), confirmedAt: caseEntry.confirmedAt || null,
+    // Which Excel row fills the non-document fields (file name and row only - never the values).
+    sheetImport: caseEntry.sheetImport ? { fileName: caseEntry.sheetImport.fileName, rowNumber: caseEntry.sheetImport.rowNumber, clientReference: caseEntry.sheetImport.clientReference || null } : null,
     documents: caseEntry.documents.map(toDocumentSummary),
   };
 }

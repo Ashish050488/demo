@@ -14,3 +14,12 @@ export const startBatch = (batchId: string) => sendJson<BatchStatus>(`/batches/$
 export const deleteBatch = (batchId: string) => sendJson(`/batches/${batchId}`, "DELETE");
 export const getBatchEventsUrl = (batchId: string) => buildApiUrl(`/batches/${batchId}/events`);
 export const getBatchPdfsUrl = (batchId: string) => buildApiUrl(`/batches/${batchId}/pdfs`);
+
+export interface BatchSheetImportSummary { updatedCount: number; notInFile: string[]; alreadySaved: string[] }
+
+/** A corrected Excel for the whole batch: each client takes the row with its own client reference. */
+export function importBatchSheet(batchId: string, sheetFile: File) {
+  const formData = new FormData();
+  formData.append("file", sheetFile);
+  return requestJson<BatchSheetImportSummary>(`/batches/${batchId}/sheet-import`, { method: "POST", body: formData });
+}

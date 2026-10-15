@@ -17,9 +17,13 @@ export function useReviewSession(caseId: string) {
   const [committedFields, setCommittedFields] = useState<Set<string>>(new Set());
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  const reloadFields = useCallback(async (shouldRefill: boolean) => {
+  /** shouldRefill "ifNotFilled": a case the batch already filled just opens - no second fill while others are
+   * still being read. */
+  const reloadFields = useCallback(async (shouldRefill: boolean | "ifNotFilled") => {
+    setLoadError(null);
     try {
-      if (shouldRefill) await fillCase(caseId);
+      const needsFill = shouldRefill === "ifNotFilled" ? !(await fetchCase(caseId)).isFilled : shouldRefill;
+      if (needsFill) await fillCase(caseId);
       const [loadedFieldsView, loadedCase] = await Promise.all([fetchCaseFields(caseId), fetchCase(caseId)]);
       setFieldsView(loadedFieldsView);
       setCaseSummary(loadedCase);
@@ -32,7 +36,7 @@ export function useReviewSession(caseId: string) {
     }
   }, [caseId]);
 
-  useEffect(() => { reloadFields(true); }, [reloadFields]);
+  useEffect(() => { reloadFields("ifNotFilled"); }, [reloadFields]);
 
   const shownFields = useMemo(() => (fieldsView && formRules ? fieldsView.fields.filter((caseField) => isShownField(caseField, formRules)) : []), [fieldsView, formRules]);
   const effectiveValues = useMemo(() => collectEffectiveValues(shownFields, editedValues), [shownFields, editedValues]);

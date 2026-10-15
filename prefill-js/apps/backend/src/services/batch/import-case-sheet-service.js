@@ -25,11 +25,33 @@ async function compareWithFilledForm(caseId, sheetValues) {
   return { documentWins, keptCorrections };
 }
 
+const normalizeReference = (reference) => String(reference || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+const isSameReference = (first, second) => Boolean(normalizeReference(first)) && normalizeReference(first) === normalizeReference(second);
+
+/** One Excel for a whole batch: every client takes the row with its own client reference. Saved clients are left
+ * alone; a client whose reference isn't in the file is listed, not guessed. */
+export async function importSheetIntoBatch(batchCases, fileBytes, fileName) {
+  const { sheetRows } = await readFormSheet(batchCases[0].formId, fileBytes, fileName);
+  const summary = { updatedCount: 0, notInFile: [], alreadySaved: [] };
+  for (const caseEntry of batchCases) {
+    const reference = caseEntry.sheetImport?.clientReference;
+    if (caseEntry.confirmedAt) { summary.alreadySaved.push(reference); continue; }
+    const ownRow = sheetRows.find((sheetRow) => isSameReference(sheetRow.clientReference, reference));
+    if (!ownRow) { summary.notInFile.push(reference || "(no reference)"); continue; }
+    await importSheetIntoCase(caseEntry, fileBytes, fileName, ownRow.rowNumber);
+    summary.updatedCount += 1;
+  }
+  return summary;
+}
+
 /** {needsRowChoice, sheetRows} when the file has several clients and no row was picked; else the import report. */
 export async function importSheetIntoCase(caseEntry, fileBytes, fileName, requestedRowNumber) {
   const { rows, sheetName, batchColumns, columnMatch, sheetRows } = await readFormSheet(caseEntry.formId, fileBytes, fileName);
 
-  const rowNumber = requestedRowNumber ?? (sheetRows.length === 1 ? sheetRows[0].rowNumber : null);
+  // A batch client already knows its own row: the one with its client reference - no need to ask.
+  const ownRow = caseEntry.sheetImport?.clientReference
+    ? sheetRows.find((sheetRow) => isSameReference(sheetRow.clientReference, caseEntry.sheetImport.clientReference)) : null;
+  const rowNumber = requestedRowNumber ?? ownRow?.rowNumber ?? (sheetRows.length === 1 ? sheetRows[0].rowNumber : null);
   if (rowNumber == null) return { needsRowChoice: true, sheetName, sheetRows };
   if (!sheetRows.some((sheetRow) => sheetRow.rowNumber === rowNumber)) throw new SheetFileError(`Row ${rowNumber} has no client data.`);
 

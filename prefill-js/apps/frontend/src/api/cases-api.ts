@@ -42,6 +42,8 @@ export async function fetchPreviewImage(caseId: string, field: string | null, va
 }
 
 /** Fill this case from one row of an Excel/CSV. Without rowNumber, a file with several clients returns the rows to pick from. */
+export const removeCaseSheet = (caseId: string) => requestJson<{ caseId: string }>(`/cases/${caseId}/sheet-import`, { method: "DELETE" });
+
 export function importCaseSheet(caseId: string, sheetFile: File, rowNumber?: number) {
   const formData = new FormData();
   formData.append("file", sheetFile);

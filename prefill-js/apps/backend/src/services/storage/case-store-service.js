@@ -5,45 +5,16 @@
 // from a request-supplied id before that lookup succeeds. Ids are server-generated UUIDs.
 import crypto from "node:crypto";
 import path from "node:path";
-import { readFile, writeFile, mkdir, rm, rename } from "node:fs/promises";
+import { mkdir, rm } from "node:fs/promises";
+import { createJsonFileStore } from "./json-file-store-helpers.js";
 import { UPLOADS_DIRECTORY, OUTPUT_DIRECTORY } from "../../config/paths-config.js";
 
 const MANIFEST_PATH = path.join(UPLOADS_DIRECTORY, "manifest.json");
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// Every read-modify-write goes through this queue, so concurrent OCR jobs finishing at once never interleave
-// their writes; each write is temp-file-then-rename (atomic), so a reader never sees a half-written file.
-let manifestQueue = Promise.resolve();
-function runInManifestQueue(task) {
-  const run = manifestQueue.then(task, task);
-  manifestQueue = run.then(() => {}, () => {});
-  return run;
-}
-
-async function readManifestFile() {
-  try {
-    return JSON.parse(await readFile(MANIFEST_PATH, "utf-8"));
-  } catch (error) {
-    if (error.code === "ENOENT") return {};
-    throw error;
-  }
-}
-
-async function writeManifestFile(manifest) {
-  await mkdir(UPLOADS_DIRECTORY, { recursive: true });
-  const temporaryPath = `${MANIFEST_PATH}.${crypto.randomUUID()}.tmp`;
-  await writeFile(temporaryPath, JSON.stringify(manifest, null, 2));
-  await rename(temporaryPath, MANIFEST_PATH);
-}
-
-function updateManifest(mutate) {
-  return runInManifestQueue(async () => {
-    const manifest = await readManifestFile();
-    const mutationResult = await mutate(manifest);
-    await writeManifestFile(manifest);
-    return mutationResult;
-  });
-}
+// Reads come from memory and writes are queued + atomic + retried on Windows file locks (json-file-store-helpers.js).
+const manifestStore = createJsonFileStore(MANIFEST_PATH);
+const updateManifest = (mutate) => manifestStore.update(mutate);
 
 export async function createCase(formId, { batchId = null, typedValues = {} } = {}) {
   const caseId = crypto.randomUUID();
@@ -60,12 +31,12 @@ export async function createCase(formId, { batchId = null, typedValues = {} } = 
  * path derived from a case id is touched. */
 export async function getCase(caseId) {
   if (typeof caseId !== "string" || !UUID_PATTERN.test(caseId)) return null;
-  const manifest = await runInManifestQueue(readManifestFile);
+  const manifest = await manifestStore.read();
   return manifest[caseId] || null;
 }
 
 export async function listCases() {
-  const manifest = await runInManifestQueue(readManifestFile);
+  const manifest = await manifestStore.read();
   return Object.values(manifest);
 }
 

@@ -71,6 +71,41 @@ export async function rasterizeFirstPage(pdfPath, { scale = 3.0 } = {}) {
   }
 }
 
+/**
+ * An uploaded ID PDF for OCR: its first `maximumPages` pages stacked top to bottom on one canvas - an Aadhaar
+ * scanned as front on page 1 and back on page 2 is read as one card. Returns the plain PNG (for PaddleOCR) and
+ * the Otsu-thresholded one (for Tesseract). A one-page PDF gives exactly what rasterizeFirstPage gives.
+ */
+export async function rasterizeScanPages(pdfPath, { scale = 3.0, maximumPages = 2 } = {}) {
+  const bytes = await readFile(pdfPath);
+  const doc = await pdfjs.getDocument({ data: new Uint8Array(bytes), isEvalSupported: false, standardFontDataUrl: STANDARD_FONT_DATA_URL }).promise;
+  try {
+    const pageCanvases = [];
+    for (let pageNumber = 1; pageNumber <= Math.min(maximumPages, doc.numPages); pageNumber++) {
+      const page = await doc.getPage(pageNumber);
+      const viewport = page.getViewport({ scale });
+      const { canvas, context } = doc.canvasFactory.create(Math.ceil(viewport.width), Math.ceil(viewport.height));
+      await page.render({ canvasContext: context, viewport }).promise;
+      pageCanvases.push(canvas);
+    }
+    // pdf.js's own canvas kind: a page canvas can only be drawn onto a canvas from the same library.
+    const { canvas: stacked, context: stackedContext } = doc.canvasFactory.create(
+      Math.max(...pageCanvases.map((pageCanvas) => pageCanvas.width)), pageCanvases.reduce((sum, pageCanvas) => sum + pageCanvas.height, 0));
+    stackedContext.fillStyle = "#ffffff";
+    stackedContext.fillRect(0, 0, stacked.width, stacked.height);
+    let top = 0;
+    for (const pageCanvas of pageCanvases) {
+      stackedContext.drawImage(pageCanvas, 0, top);
+      top += pageCanvas.height;
+    }
+    const plainPng = stacked.toBuffer("image/png");
+    const threshold = binarize(stacked);
+    return { png: stacked.toBuffer("image/png"), plainPng, threshold, pageCount: doc.numPages };
+  } finally {
+    await doc.destroy();
+  }
+}
+
 /** Any page, any scale, as a plain (non-thresholded) PNG - for display in the review UI, not OCR. Also
  * returns the page's point size (unscaled), so a caller can convert a point-space bbox to 0..1 fractions. */
 export async function renderPage(pdfPath, pageNumber, { scale = 1.6 } = {}) {

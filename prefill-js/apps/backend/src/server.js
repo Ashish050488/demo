@@ -10,7 +10,16 @@ import casesRouter from "./api/cases/cases-routes.js";
 import batchesRouter from "./api/batches/batches-routes.js";
 import { startBatchRunner } from "./services/batch/batch-runner-service.js";
 import googleSheetSettingsRouter from "./api/settings/google-sheet-settings-routes.js";
-import { warmUp as warmUpPaddleOcr } from "./services/ocr/paddle-ocr-service.js";
+import { startScanOcrThreads } from "./services/ocr/scan-ocr-pool-service.js";
+
+// The OCR engine (opencv, loaded with PaddleOCR) installs "any stray error -> abort the process" handlers, so one
+// failed write once took the whole server down mid-batch. Replace them: log it, keep serving every other client.
+function keepServerRunningOnStrayErrors() {
+  for (const eventName of ["uncaughtException", "unhandledRejection"]) process.removeAllListeners(eventName);
+  process.on("unhandledRejection", (reason) => console.error("unhandled rejection (server kept running):", reason?.stack || reason));
+  process.on("uncaughtException", (error) => console.error("uncaught error (server kept running):", error?.stack || error));
+}
+keepServerRunningOnStrayErrors();
 
 const application = express();
 application.use(requireAllowedHostMiddleware);
@@ -26,7 +35,7 @@ application.use("/api", (request, response) => sendError(response, 404, ERROR_CO
 application.use(handleErrorMiddleware);
 
 application.listen(APPLICATION_PORT, APPLICATION_HOST, () => {
-  warmUpPaddleOcr();
+  startScanOcrThreads(); // OCR runs on its own threads, so the screens stay quick while a batch is read
   startBatchRunner();
   console.log(`backend API: http://${APPLICATION_HOST}:${APPLICATION_PORT}/api`);
 });

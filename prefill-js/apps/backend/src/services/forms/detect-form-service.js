@@ -25,9 +25,12 @@ export async function detectFormId(pdfBytes) {
   } catch {
     return null;
   }
+  // PDFs split words into pieces with uneven spacing ("FORM   FOR NON"): compare with every space run made one.
+  const squeezeSpaces = (text) => text.replace(/\s+/g, " ");
+  const pageText = squeezeSpaces(firstPageText);
   for (const formId of listFormIds()) {
     const { detectionPhrases } = await fetchFormRules(formId);
-    if (detectionPhrases.every((phrase) => firstPageText.includes(phrase))) return formId;
+    if (detectionPhrases.every((phrase) => pageText.includes(squeezeSpaces(phrase)))) return formId;
   }
   return null;
 }

@@ -1,6 +1,7 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { importCaseSheet } from "@/api/cases-api";
+import { importBatchSheet, type BatchSheetImportSummary } from "@/api/batches-api";
 import { getBatchTemplateUrl } from "@/api/forms-api";
 import Button, { ButtonLink } from "@/components/ui/Button";
 import Dialog from "@/components/ui/Dialog";
@@ -16,18 +17,37 @@ interface SheetImportDialogProps {
   formId: string;
   isOpen: boolean;
   onClose: () => void;
-  onImported: () => Promise<void>;
+  onImported: (importResult: SheetImportResult) => Promise<void>;
+  /** A file already chosen elsewhere (dropped with the documents): read at once when the dialog opens. */
+  initialFile?: File | null;
+  /** In a batch: also offer to apply the same Excel to every client (each takes its own row). */
+  batchId?: string | null;
 }
 
 /** Fill this case's non-document fields from one row of an Excel/CSV: choose file → (pick row) → report. */
-export default function SheetImportDialog({ caseId, formId, isOpen, onClose, onImported }: SheetImportDialogProps) {
+export default function SheetImportDialog({ caseId, formId, isOpen, onClose, onImported, initialFile = null, batchId = null }: SheetImportDialogProps) {
   const [chosenFile, setChosenFile] = useState<File | null>(null);
   const [sheetRows, setSheetRows] = useState<SheetRowSummary[] | null>(null);
   const [importResult, setImportResult] = useState<SheetImportResult | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isWorking, setIsWorking] = useState(false);
+  const [batchSummary, setBatchSummary] = useState<BatchSheetImportSummary | null>(null);
 
-  const resetDialog = () => { setChosenFile(null); setSheetRows(null); setImportResult(null); setErrorMessage(null); };
+  async function applyToWholeBatch() {
+    if (!batchId || !chosenFile) return;
+    setIsWorking(true);
+    setErrorMessage(null);
+    try {
+      setBatchSummary(await importBatchSheet(batchId, chosenFile));
+      await onImported(importResult as SheetImportResult);
+    } catch (error) {
+      setErrorMessage((error as Error).message);
+    } finally {
+      setIsWorking(false);
+    }
+  }
+
+  const resetDialog = () => { setChosenFile(null); setSheetRows(null); setImportResult(null); setErrorMessage(null); setBatchSummary(null); };
   const handleClose = () => { if (!isWorking) { resetDialog(); onClose(); } };
 
   async function runImport(sheetFile: File, rowNumber?: number) {
@@ -38,7 +58,7 @@ export default function SheetImportDialog({ caseId, formId, isOpen, onClose, onI
       if (result.needsRowChoice) { setSheetRows(result.sheetRows || []); return; }
       setSheetRows(null);
       setImportResult(result);
-      await onImported();
+      await onImported(result);
     } catch (error) {
       setErrorMessage((error as Error).message);
     } finally {
@@ -52,13 +72,15 @@ export default function SheetImportDialog({ caseId, formId, isOpen, onClose, onI
     setChosenFile(sheetFile);
     runImport(sheetFile);
   };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { if (isOpen && initialFile) handleFileChosen(initialFile); }, [isOpen, initialFile]);
 
   return (
     <Dialog title="Fill from Excel" isOpen={isOpen} onClose={handleClose} width="large">
       {!importResult ? (
         <div className="space-y-3">
           <p className="text-sm text-muted">
-            Fills the fields documents can&apos;t show (DP ID, share %, mobile, email…) from one row of an .xlsx or .csv.
+            Fills the fields documents can&apos;t show (bank, amount, mobile, email…) from one row of an .xlsx or .csv.
             Values read from documents are kept; your corrections are kept.
           </p>
           <FileDropZone allowedExtensions={SHEET_EXTENSIONS} isCompact isDisabled={isWorking}
@@ -90,7 +112,13 @@ export default function SheetImportDialog({ caseId, formId, isOpen, onClose, onI
       {importResult ? (
         <>
           <SheetImportReport importResult={importResult} />
+          {batchSummary ? (
+            <div className="mt-3"><Notice tone="success">Updated {batchSummary.updatedCount} client{batchSummary.updatedCount === 1 ? "" : "s"} from this Excel
+              {batchSummary.notInFile.length ? ` · not in the file: ${batchSummary.notInFile.join(", ")}` : ""}
+              {batchSummary.alreadySaved.length ? ` · already saved, left as they are: ${batchSummary.alreadySaved.join(", ")}` : ""}</Notice></div>
+          ) : null}
           <div className="mt-4 flex justify-end gap-2">
+            {batchId && !batchSummary ? <Button disabled={isWorking} onClick={applyToWholeBatch}>{isWorking ? "Updating every client…" : "Apply to all clients in this batch"}</Button> : null}
             <Button onClick={resetDialog}>Import another file or row</Button>
             <Button variant="primary" onClick={handleClose}>Done</Button>
           </div>

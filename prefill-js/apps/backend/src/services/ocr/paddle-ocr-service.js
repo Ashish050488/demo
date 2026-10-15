@@ -19,7 +19,7 @@ function getOcr() {
 
 /** Start loading the models now (server start), so the first upload doesn't pay for it. */
 export function warmUp() {
-  getOcr().catch((err) => console.error("PaddleOCR warm-up failed:", err.message));
+  return getOcr().then(() => {}, (err) => console.error("PaddleOCR warm-up failed:", err.message));
 }
 
 /** Loads the ONNX models on first call (a few seconds); every call after that reuses the same instance. */

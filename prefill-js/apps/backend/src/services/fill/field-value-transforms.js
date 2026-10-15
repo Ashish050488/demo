@@ -29,8 +29,9 @@ function addressHalf(address, wantSecondHalf) {
 }
 
 /** Aadhaar addresses start with the care-of line ("S/O: RAKESH KUMAR,"): not part of a postal address on other forms. */
+// "S/O" as OCR often reads it too: "5/0", "$/0".
 function withoutCareOf(address) {
-  return String(address).replace(/^\s*(?:S|D|W|C)\s*\/\s*O\s*[:.-]?\s*[^,]*,\s*/i, "").replace(/\s*,(?:\s*,)+/g, ",").replace(/,(?=\S)/g, ", ").trim();
+  return String(address).replace(/^\s*[SDWC5$]\s*\/\s*[O0]\s*[:.-]?\s*[^,]*,\s*/i, "").replace(/\s*,(?:\s*,)+/g, ",").replace(/,(?=\S)/g, ", ").trim();
 }
 
 const TRANSFORMS = {

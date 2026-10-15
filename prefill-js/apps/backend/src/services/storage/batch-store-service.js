@@ -3,41 +3,15 @@
 // and download work exactly as for a single case.
 import crypto from "node:crypto";
 import path from "node:path";
-import { readFile, writeFile, mkdir, rename } from "node:fs/promises";
+import { createJsonFileStore } from "./json-file-store-helpers.js";
 import { UPLOADS_DIRECTORY } from "../../config/paths-config.js";
 
 const BATCHES_PATH = path.join(UPLOADS_DIRECTORY, "batches.json");
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-let batchesQueue = Promise.resolve();
-function runInBatchesQueue(task) {
-  const run = batchesQueue.then(task, task);
-  batchesQueue = run.then(() => {}, () => {});
-  return run;
-}
-
-async function readBatchesFile() {
-  try {
-    return JSON.parse(await readFile(BATCHES_PATH, "utf-8"));
-  } catch (error) {
-    if (error.code === "ENOENT") return {};
-    throw error;
-  }
-}
-
-async function writeBatchesFile(batches) {
-  await mkdir(UPLOADS_DIRECTORY, { recursive: true });
-  const temporaryPath = `${BATCHES_PATH}.${crypto.randomUUID()}.tmp`;
-  await writeFile(temporaryPath, JSON.stringify(batches, null, 2));
-  await rename(temporaryPath, BATCHES_PATH);
-}
-
-const updateBatches = (mutate) => runInBatchesQueue(async () => {
-  const batches = await readBatchesFile();
-  const mutationResult = await mutate(batches);
-  await writeBatchesFile(batches);
-  return mutationResult;
-});
+// Reads come from memory and writes are queued + atomic + retried on Windows file locks (json-file-store-helpers.js).
+const batchesStore = createJsonFileStore(BATCHES_PATH);
+const updateBatches = (mutate) => batchesStore.update(mutate);
 
 /** rows: [{rowNumber, formId, clientReference, displayName, caseId, documentsFromCaseId}] in sheet order - one
  * per client per form. */
@@ -52,11 +26,11 @@ export async function createBatch({ formId, formIds = [formId], sheetFileName, s
 
 export async function getBatch(batchId) {
   if (typeof batchId !== "string" || !UUID_PATTERN.test(batchId)) return null;
-  return (await runInBatchesQueue(readBatchesFile))[batchId] || null;
+  return (await batchesStore.read())[batchId] || null;
 }
 
 export async function listBatches() {
-  return Object.values(await runInBatchesQueue(readBatchesFile));
+  return Object.values(await batchesStore.read());
 }
 
 export function updateBatch(batchId, changes) {

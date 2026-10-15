@@ -9,6 +9,7 @@ import BatchFormChooser from "@/components/batches/BatchFormChooser";
 import BatchMatchTable from "@/components/batches/BatchMatchTable";
 import Button from "@/components/ui/Button";
 import FileDropZone from "@/components/ui/FileDropZone";
+import StepHeading from "@/components/batches/StepHeading";
 import Notice from "@/components/ui/Notice";
 import PageContainer from "@/components/ui/PageContainer";
 import { ApiRequestError } from "@/api/http-client";
@@ -19,15 +20,7 @@ import { addPickedFiles, matchClientFolders } from "@/utils/match-client-folders
 const SHEET_EXTENSIONS = [".xlsx", ".xls", ".csv"];
 const DOCUMENT_EXTENSIONS = [".pdf", ".jpg", ".jpeg", ".png"];
 const MAXIMUM_BATCH_FILE_COUNT = 750; // 50 clients x 15 documents
-
-function StepHeading({ number, title, isDone }: { number: number; title: string; isDone: boolean }) {
-  return (
-    <div className="mb-2 flex items-center gap-2 text-sm font-semibold">
-      <span className={`grid h-6 w-6 place-items-center rounded-full text-xs ${isDone ? "bg-brand-500 text-white" : "bg-ink text-white"}`}>{isDone ? "✓" : number}</span>
-      {title}
-    </div>
-  );
-}
+const isSheetFile = (chosenFile: File) => /\.(xlsx|xls|csv)$/i.test(chosenFile.name);
 
 export default function NewBatchPage() {
   const router = useRouter();
@@ -93,6 +86,17 @@ export default function NewBatchPage() {
     }
   }
 
+  /** Everything at once: a folder (or a pile of files) that also holds the client Excel - the Excel is read as
+   * step 2, every other file is matched to its client's folder. */
+  async function handleDocumentsChosen(chosenFiles: File[], chosenPaths: string[]) {
+    const sheetFile = chosenFiles.find(isSheetFile);
+    if (!sheetFile && !batch) setErrorMessage("No Excel in this folder - put the client Excel in it (next to the client folders) and choose it again");
+    if (sheetFile && sheetFile.name !== batch?.sheetFileName) await handleSheetChosen([sheetFile]);
+    const keptIndexes = chosenFiles.map((_file, index) => index).filter((index) => !isSheetFile(chosenFiles[index]));
+    setDocumentFiles(keptIndexes.map((index) => chosenFiles[index]));
+    setRelativePaths(keptIndexes.map((index) => chosenPaths[index]));
+  }
+
   /** A combined Excel read for fewer forms leaves columns unused: if every form together uses them all, prefer that. */
   async function findCombinedFit(createdBatch: BatchStatus, sheetFile: File): Promise<BatchStatus | null> {
     const hasUnusedColumns = createdBatch.warnings.some((warning) => warning.startsWith("Columns not used"));
@@ -119,6 +123,7 @@ export default function NewBatchPage() {
 
   async function handleStart() {
     if (!batch || !folderMatch) return;
+    if (!folderMatch.filesByCaseId.size && !window.confirm("No client has documents yet (step 3) - nothing will be read from Aadhaar/PAN. Fill from the Excel only?")) return;
     setErrorMessage(null);
     const uploadProblems: string[] = [];
     const clientsWithFiles = documentClients.filter((client) => folderMatch.filesByCaseId.has(client.caseId));
@@ -168,18 +173,12 @@ export default function NewBatchPage() {
             <BatchFormChooser forms={forms} chosenFormIds={formIds} isDisabled={isWorking} onChange={handleChooseForms} />
           </section>
           <section>
-            <StepHeading number={2} title="Client Excel" isDone={Boolean(batch)} />
-            <FileDropZone allowedExtensions={SHEET_EXTENSIONS} isCompact isDisabled={!formIds.length || isWorking} buttonLabel={batch ? "Choose another" : "Choose Excel"}
-              title={batch ? `${clientCount} clients from ${batch.sheetFileName}` : "Drop the client Excel here"}
-              hint={batch ? "Dropping another file replaces it" : "Up to 50 rows · .xlsx, .xls or .csv · the template's client_reference column names each client's folder"}
-              onFilesChosen={handleSheetChosen} />
-          </section>
-          <section>
-            <StepHeading number={3} title="Documents folder" isDone={matchedClientCount > 0} />
-            <FileDropZone allowedExtensions={DOCUMENT_EXTENSIONS} isMultiple isFolderAllowed isCompact maximumFileCount={MAXIMUM_BATCH_FILE_COUNT} isDisabled={!batch || isWorking}
-              buttonLabel="Choose files" title={documentFiles.length ? `${documentFiles.length} files · ${matchedClientCount} clients matched` : "Drop the clients folder here"}
-              hint={<>One folder per client, named like its client reference (C-002) or name. Inside, files can be loose or in &quot;Nominee 1&quot;, &quot;Nominee 2&quot; folders. Optional - a client without a folder is filled from the Excel only.</>}
-              onFilesChosen={(chosenFiles, chosenPaths) => { setDocumentFiles(chosenFiles); setRelativePaths(chosenPaths); }} />
+            <StepHeading number={2} title="Excel and documents" isDone={Boolean(batch)} />
+            <FileDropZone allowedExtensions={[...DOCUMENT_EXTENSIONS, ...SHEET_EXTENSIONS]} isMultiple isFolderAllowed isFolderOnly isCompact maximumFileCount={MAXIMUM_BATCH_FILE_COUNT}
+              isDisabled={!formIds.length || isWorking} buttonLabel="Choose files"
+              title={batch ? `${clientCount} clients from ${batch.sheetFileName} · ${matchedClientCount} with documents` : "Drop the folder here"}
+              hint="One folder: the client Excel + one folder per client"
+              onFilesChosen={handleDocumentsChosen} />
           </section>
           {infoMessage ? <Notice tone="success">{infoMessage}</Notice> : null}
           {errorMessage ? <Notice tone="error">{errorMessage}</Notice> : null}

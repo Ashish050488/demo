@@ -103,6 +103,12 @@ export function findAadhaarLast4(lines) {
       if (there) return { ...there, source: "unmasked, read from the line under the label" };
     }
   }
+  // Physical / PVC cards print the full number with NO label: a line that is just "dddd dddd dddd" (12 digits,
+  // nothing more - a VID has 16, a mobile 10). Only called on documents already classified as Aadhaar.
+  for (const line of lines) {
+    if (/VID/i.test(line.text)) continue;
+    if (/^\D{0,3}\d{4}\s\d{4}\s\d{4}\D{0,3}$/.test(line.text.trim())) return { ...last4From(line), source: "unmasked, the card's number line" };
+  }
   return null;
 }
 
@@ -113,10 +119,21 @@ export function findAadhaarLast4(lines) {
 // C/O or S/O (without a preceding "Address" line already matched) is the fallback for a crop that excludes
 // the heading.
 const ADDRESS_START_RE = /^Address\s*:?$|^Address\s*:/i;
-const CARE_OF_START_RE = /^[CS]\s*\/\s*O\b/i;
+const CARE_OF_START_RE = /^[CSDW5$]\s*\/\s*[O0]\b/i; // OCR also reads S/O as 5/0 or $/0
+
+/** The rows of the column the address sits in. An e-Aadhaar PDF prints the front and back cards SIDE BY SIDE, so
+ * "Address:" can be the right-hand segment of a row: follow that column (segments starting near its left edge),
+ * not the left-most one, which there is the front card (name, DOB). */
+function addressColumnRows(lines) {
+  const segments = rowsOf(lines).flat();
+  const anchor = segments.find((segment) => ADDRESS_START_RE.test(segment.text.trim())) || segments.find((segment) => CARE_OF_START_RE.test(segment.text.trim()));
+  if (!anchor || anchor.x0 == null) return personalInfoRows(lines);
+  // A one-column row gives its only segment (as before); a two-card row gives the card nearest the label.
+  return rowsOf(lines).map((row) => row.reduce((nearest, segment) => (Math.abs(segment.x0 - anchor.x0) < Math.abs(nearest.x0 - anchor.x0) ? segment : nearest)));
+}
 
 export function findAddress(lines) {
-  const rows = personalInfoRows(lines);
+  const rows = addressColumnRows(lines);
   let start = rows.findIndex((r) => ADDRESS_START_RE.test(r.text.trim()));
   if (start !== -1) {
     // "Address:" is a heading, not itself part of the value - the real text starts on the next row unless
@@ -135,7 +152,9 @@ export function findAddress(lines) {
   // - this field has no masking of its own (unlike id_aadhaar_last4/id_details), so a full Aadhaar number
   // must never be able to reach it at all.
   const hasLongDigitRun = (text) => text.replace(/\D/g, "").length >= 8;
-  const stopPatterns = [/^Mobile\b/i, /MERA\s+AADHAAR/i, /\bAADHAAR\b.{0,3}\bMERI\b/i];
+  // Spaces optional: PaddleOCR often glues words ("MERAAADHAAR"). The masked number ("XXXX XXXX 1234") printed
+  // under the address has only 4 digits, so the digit-run check above misses it - stop on its X groups too.
+  const stopPatterns = [/^Mobile\b/i, /MERA\s*AADHAAR/i, /AADHAAR\W{0,3}\s*MERI/i, /MERI\s*PEHCHAN/i, /X{3,4}\s*X{4}\s*\d{4}/i];
   let end = rows.findIndex((r, i) => {
     if (i <= start) return false;
     const text = r.text.trim();

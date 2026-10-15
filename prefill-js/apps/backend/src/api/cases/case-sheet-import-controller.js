@@ -5,6 +5,9 @@ import { sendData, ApiError, ERROR_CODES } from "../../helpers/api-response-help
 import { groupCaseDocuments } from "../../services/documents/group-documents-service.js";
 import { importSheetIntoCase } from "../../services/batch/import-case-sheet-service.js";
 import { SheetFileError } from "../../services/batch/read-sheet-file-service.js";
+import { updateCase } from "../../services/storage/case-store-service.js";
+import { storeTypedPanValues } from "../../services/documents/identity-number-memory-service.js";
+import { fillCase } from "../../services/fill/fill-case-service.js";
 
 export async function handleImportCaseSheet(request, response) {
   if (!request.file) throw new ApiError(400, ERROR_CODES.INVALID_REQUEST, "No file uploaded");
@@ -25,4 +28,14 @@ export async function handleImportCaseSheet(request, response) {
     if (error instanceof SheetFileError) throw new ApiError(422, "SHEET_NOT_USABLE", error.message);
     throw error;
   }
+}
+
+// DELETE /api/cases/:caseId/sheet-import - forget the imported Excel row (its values and its PAN values); a filled
+// case is filled again so the form no longer shows them. Document values and reviewer corrections stay.
+export async function handleRemoveCaseSheet(request, response) {
+  if (request.caseEntry.confirmedAt) throw new ApiError(409, "CASE_ALREADY_SAVED", "This case is already saved");
+  await updateCase(request.caseEntry.id, { typedValues: {}, sheetImport: null });
+  storeTypedPanValues(request.caseEntry.id, {});
+  if (request.caseEntry.isFilled) await fillCase({ ...request.caseEntry, typedValues: {} });
+  sendData(response, { caseId: request.caseEntry.id });
 }
