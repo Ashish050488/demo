@@ -6,7 +6,8 @@ import { detectFormId } from "../../services/forms/detect-form-service.js";
 import { buildFormMappingOverlay } from "../../services/forms/form-mapping-overlay-service.js";
 import { buildSheetColumns } from "../../services/sheets/sheet-columns-helpers.js";
 import { renderPage } from "../../services/pdf/render-page-service.js";
-import { buildBatchTemplate } from "../../services/batch/batch-template-service.js";
+import { buildBatchTemplate, buildCombinedBatchTemplate } from "../../services/batch/batch-template-service.js";
+import { getFormDefinition } from "../../forms/form-registry.js";
 import { buildBatchColumns } from "../../services/batch/batch-columns-helpers.js";
 
 const PAGE_IMAGE_WIDTH_PIXELS = 1400;
@@ -62,6 +63,15 @@ export async function handleGetBlankPageImage(request, response) {
 /** The Excel a client fills with one row per client, for this form. */
 export async function handleDownloadBatchTemplate(request, response) {
   const { fileBytes, fileName } = await buildBatchTemplate(request.formDefinition.formId);
+  response.set("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    .set("Content-Disposition", `attachment; filename="${fileName}"`).send(fileBytes);
+}
+
+/** ?formIds=a,b -> one Excel template for several forms (each shared value asked once). */
+export async function handleDownloadCombinedBatchTemplate(request, response) {
+  const formIds = [...new Set(String(request.query.formIds || "").split(",").map((formId) => formId.trim()).filter(Boolean))];
+  if (!formIds.length || formIds.some((formId) => !getFormDefinition(formId))) throw new ApiError(400, ERROR_CODES.INVALID_REQUEST, "Unknown formId");
+  const { fileBytes, fileName } = formIds.length === 1 ? await buildBatchTemplate(formIds[0]) : await buildCombinedBatchTemplate(formIds);
   response.set("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     .set("Content-Disposition", `attachment; filename="${fileName}"`).send(fileBytes);
 }

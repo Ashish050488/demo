@@ -3,7 +3,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { createBatch, deleteBatch, startBatch } from "@/api/batches-api";
 import { uploadDocuments } from "@/api/cases-api";
-import { fetchForms, getBatchTemplateUrl } from "@/api/forms-api";
+import { fetchForms } from "@/api/forms-api";
+import BatchFormChooser from "@/components/batches/BatchFormChooser";
 import BatchMatchTable from "@/components/batches/BatchMatchTable";
 import Button from "@/components/ui/Button";
 import FileDropZone from "@/components/ui/FileDropZone";
@@ -30,7 +31,7 @@ function StepHeading({ number, title, isDone }: { number: number; title: string;
 export default function NewBatchPage() {
   const router = useRouter();
   const [forms, setForms] = useState<FormSummary[]>([]);
-  const [formId, setFormId] = useState<string | null>(null);
+  const [formIds, setFormIds] = useState<string[]>([]);
   const [batch, setBatch] = useState<BatchStatus | null>(null);
   const [documentFiles, setDocumentFiles] = useState<File[]>([]);
   const [relativePaths, setRelativePaths] = useState<string[]>([]);
@@ -39,12 +40,13 @@ export default function NewBatchPage() {
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchForms().then((loadedForms) => { setForms(loadedForms); setFormId((current) => current ?? loadedForms[0]?.formId ?? null); })
+    fetchForms().then((loadedForms) => { setForms(loadedForms); setFormIds((current) => (current.length ? current : loadedForms.slice(0, 1).map((form) => form.formId))); })
       .catch((error: Error) => setErrorMessage(error.message));
   }, []);
 
-  const folderMatch = useMemo(() => (batch ? matchClientFolders(batch.clients, documentFiles, relativePaths) : null), [batch, documentFiles, relativePaths]);
-  const chosenForm = forms.find((form) => form.formId === formId);
+  // Documents go to each client's first form only; its other forms share them once they are read.
+  const documentClients = useMemo(() => batch?.clients.filter((client) => !client.documentsFromCaseId) || [], [batch]);
+  const folderMatch = useMemo(() => (batch ? matchClientFolders(documentClients, documentFiles, relativePaths) : null), [batch, documentClients, documentFiles, relativePaths]);
 
   /** A batch not started yet is only a draft - replace it when the form or the Excel changes. */
   async function discardDraftBatch() {
@@ -52,37 +54,61 @@ export default function NewBatchPage() {
     setBatch(null);
   }
 
-  async function handleChooseForm(nextFormId: string) {
-    if (nextFormId === formId) return;
+  async function handleChooseForms(nextFormIds: string[]) {
     await discardDraftBatch();
-    setFormId(nextFormId);
+    setInfoMessage(null);
+    setFormIds(nextFormIds);
   }
 
   async function handleSheetChosen([sheetFile]: File[]) {
-    if (!formId || !sheetFile) return;
+    if (!formIds.length || !sheetFile) return;
     setErrorMessage(null);
     setInfoMessage(null);
     setWorkMessage("Reading the Excel…");
     try {
       await discardDraftBatch();
-      setBatch(await createBatch(formId, sheetFile));
+      const createdBatch = await createBatch(formIds, sheetFile);
+      const combinedBatch = await findCombinedFit(createdBatch, sheetFile);
+      setBatch(combinedBatch || createdBatch);
+      if (combinedBatch) {
+        setFormIds(combinedBatch.formIds);
+        setInfoMessage(`This Excel has columns for ${combinedBatch.forms.length} forms - ticked all of them.`);
+      }
     } catch (error) {
       // An Excel made for the other form: switch to the form it fits instead of making the user start over.
       const isWrongForm = error instanceof ApiRequestError && error.code === "SHEET_NOT_USABLE" && /different form|None of the column headings/.test(error.message);
-      const fittingBatch = isWrongForm ? await findFittingForm(sheetFile) : null;
-      if (fittingBatch) {
-        setFormId(fittingBatch.formId);
-        setBatch(fittingBatch);
-        setInfoMessage(`This Excel is for ${fittingBatch.formLabel} - switched to that form.`);
+      const fittingBatch = isWrongForm && formIds.length === 1 ? await findFittingForm(sheetFile) : null;
+      const bestBatch = fittingBatch ? (await findCombinedFit(fittingBatch, sheetFile)) || fittingBatch : null;
+      if (bestBatch) {
+        setFormIds(bestBatch.formIds);
+        setBatch(bestBatch);
+        setInfoMessage(bestBatch.forms.length > 1 ? `This Excel has columns for ${bestBatch.forms.length} forms - ticked all of them.` : `This Excel is for ${bestBatch.formLabel} - switched to that form.`);
       } else setErrorMessage((error as Error).message);
     } finally {
       setWorkMessage(null);
     }
   }
 
+  /** A combined Excel read for fewer forms leaves columns unused: if every form together uses them all, prefer that. */
+  async function findCombinedFit(createdBatch: BatchStatus, sheetFile: File): Promise<BatchStatus | null> {
+    const hasUnusedColumns = createdBatch.warnings.some((warning) => warning.startsWith("Columns not used"));
+    if (!hasUnusedColumns || createdBatch.forms.length >= forms.length) return null;
+    try {
+      const combinedBatch = await createBatch(forms.map((form) => form.formId), sheetFile);
+      if (combinedBatch.warnings.some((warning) => warning.startsWith("Columns not used"))) {
+        await deleteBatch(combinedBatch.id).catch(() => {});
+        return null;
+      }
+      await deleteBatch(createdBatch.id).catch(() => {});
+      return combinedBatch;
+    } catch {
+      return null;
+    }
+  }
+
   async function findFittingForm(sheetFile: File): Promise<BatchStatus | null> {
-    for (const otherForm of forms.filter((form) => form.formId !== formId)) {
-      try { return await createBatch(otherForm.formId, sheetFile); } catch { /* not this one either */ }
+    for (const otherForm of forms.filter((form) => !formIds.includes(form.formId))) {
+      try { return await createBatch([otherForm.formId], sheetFile); } catch { /* not this one either */ }
     }
     return null;
   }
@@ -91,7 +117,7 @@ export default function NewBatchPage() {
     if (!batch || !folderMatch) return;
     setErrorMessage(null);
     const uploadProblems: string[] = [];
-    const clientsWithFiles = batch.clients.filter((client) => folderMatch.filesByCaseId.has(client.caseId));
+    const clientsWithFiles = documentClients.filter((client) => folderMatch.filesByCaseId.has(client.caseId));
     for (const [clientIndex, client] of clientsWithFiles.entries()) {
       setWorkMessage(`Uploading documents · client ${clientIndex + 1} of ${clientsWithFiles.length}…`);
       const clientFiles = folderMatch.filesByCaseId.get(client.caseId)!;
@@ -114,36 +140,27 @@ export default function NewBatchPage() {
   }
 
   const matchedClientCount = folderMatch?.filesByCaseId.size ?? 0;
+  const clientCount = documentClients.length;
+  const formCount = batch?.forms.length ?? formIds.length;
   const isWorking = Boolean(workMessage);
   return (
-    <PageContainer title="New batch" description="One Excel row = one client = one filled form. Each client's documents come from their own folder."
+    <PageContainer title="New batch" description="One Excel row = one client = one filled form per ticked form. Each client's documents come from their own folder."
       actions={<>
         {workMessage ? <span className="text-xs text-muted">{workMessage}</span> : null}
         <Button variant="primary" disabled={!batch || isWorking} onClick={handleStart}>
-          {batch ? `Start filling ${batch.clients.length} client${batch.clients.length === 1 ? "" : "s"} →` : "Start filling →"}
+          {batch ? `Start filling ${clientCount} client${clientCount === 1 ? "" : "s"}${formCount > 1 ? ` × ${formCount} forms` : ""} →` : "Start filling →"}
         </Button>
       </>}>
       <div className="grid h-full gap-5 lg:grid-cols-[22rem_minmax(0,1fr)]">
         <div className="min-w-0 space-y-5 overflow-y-auto overflow-x-hidden">
           <section>
-            <StepHeading number={1} title="Form" isDone={Boolean(formId)} />
-            <div className="space-y-1.5" role="radiogroup" aria-label="Form">
-              {forms.map((form) => (
-                <button key={form.formId} type="button" role="radio" aria-checked={form.formId === formId} disabled={isWorking} onClick={() => handleChooseForm(form.formId)}
-                  className={`flex w-full items-center gap-2.5 rounded-lg border px-3 py-2 text-left text-xs transition ${form.formId === formId ? "border-ink bg-white" : "border-line bg-white/60 text-muted hover:border-ink/40"}`}>
-                  <span className={`grid h-3.5 w-3.5 shrink-0 place-items-center rounded-full border ${form.formId === formId ? "border-ink" : "border-line"}`}>
-                    {form.formId === formId ? <span className="h-1.5 w-1.5 rounded-full bg-ink" /> : null}
-                  </span>
-                  <span className="min-w-0 flex-1 truncate font-medium text-ink" title={form.label}>{form.label}</span>
-                </button>
-              ))}
-            </div>
-            {chosenForm ? <a href={getBatchTemplateUrl(chosenForm.formId)} className="mt-1.5 inline-block text-xs text-brand-600 hover:underline">Download its Excel template</a> : null}
+            <StepHeading number={1} title={formIds.length > 1 ? `Forms (${formIds.length})` : "Form"} isDone={formIds.length > 0} />
+            <BatchFormChooser forms={forms} chosenFormIds={formIds} isDisabled={isWorking} onChange={handleChooseForms} />
           </section>
           <section>
             <StepHeading number={2} title="Client Excel" isDone={Boolean(batch)} />
-            <FileDropZone allowedExtensions={SHEET_EXTENSIONS} isCompact isDisabled={!formId || isWorking} buttonLabel={batch ? "Choose another" : "Choose Excel"}
-              title={batch ? `${batch.clients.length} clients from ${batch.sheetFileName}` : "Drop the client Excel here"}
+            <FileDropZone allowedExtensions={SHEET_EXTENSIONS} isCompact isDisabled={!formIds.length || isWorking} buttonLabel={batch ? "Choose another" : "Choose Excel"}
+              title={batch ? `${clientCount} clients from ${batch.sheetFileName}` : "Drop the client Excel here"}
               hint={batch ? "Dropping another file replaces it" : "Up to 50 rows · .xlsx, .xls or .csv · the template's client_reference column names each client's folder"}
               onFilesChosen={handleSheetChosen} />
           </section>
@@ -158,7 +175,7 @@ export default function NewBatchPage() {
           {errorMessage ? <Notice tone="error">{errorMessage}</Notice> : null}
           {batch?.warnings.map((warning) => <Notice key={warning}>{warning}</Notice>)}
         </div>
-        <BatchMatchTable batch={batch} folderMatch={folderMatch} />
+        <BatchMatchTable batch={batch} clients={documentClients} folderMatch={folderMatch} />
       </div>
     </PageContainer>
   );

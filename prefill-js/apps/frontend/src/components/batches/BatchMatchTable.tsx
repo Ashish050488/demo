@@ -1,9 +1,9 @@
 import StatusState from "@/components/ui/StatusState";
-import type { BatchStatus } from "@/types/batches";
+import type { BatchClient, BatchStatus } from "@/types/batches";
 import type { FolderMatch } from "@/utils/match-client-folders";
 
 /** Before starting: every Excel row, which folder's files it got, and anything that needs a look. */
-export default function BatchMatchTable({ batch, folderMatch }: { batch: BatchStatus | null; folderMatch: FolderMatch | null }) {
+export default function BatchMatchTable({ batch, clients, folderMatch }: { batch: BatchStatus | null; clients: BatchClient[]; folderMatch: FolderMatch | null }) {
   if (!batch || !folderMatch) {
     return (
       <section className="rounded-xl border border-line bg-white">
@@ -15,7 +15,7 @@ export default function BatchMatchTable({ batch, folderMatch }: { batch: BatchSt
   return (
     <section className="flex min-h-0 flex-col rounded-xl border border-line bg-white">
       <h2 className="flex items-center gap-2 border-b border-line px-4 py-2.5 text-sm font-semibold">
-        Clients <span className="font-normal text-muted">({batch.clients.length})</span>
+        Clients <span className="font-normal text-muted">({clients.length}{batch.forms.length > 1 ? ` × ${batch.forms.length} forms` : ""})</span>
         {unmatchedCount ? <span className="ml-auto text-xs font-normal text-amber-800">{unmatchedCount} file{unmatchedCount === 1 ? "" : "s"} matched no client</span> : null}
       </h2>
       <div className="min-h-0 flex-1 overflow-auto">
@@ -24,7 +24,7 @@ export default function BatchMatchTable({ batch, folderMatch }: { batch: BatchSt
             <tr><th className="px-4 py-2 font-medium">Row</th><th className="py-2 font-medium">Client reference</th><th className="py-2 font-medium">Name</th><th className="py-2 font-medium">Documents</th><th className="py-2 pr-4 font-medium">Notes</th></tr>
           </thead>
           <tbody className="divide-y divide-line">
-            {batch.clients.map((client) => {
+            {clients.map((client) => {
               const clientFiles = folderMatch.filesByCaseId.get(client.caseId);
               const notes = [
                 !client.clientReference ? "no client reference" : null,

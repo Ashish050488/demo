@@ -9,6 +9,7 @@ export const fetchFieldSources = (formId: string) => requestJson<FieldSources>(`
 export const fetchSheetColumns = (formId: string) =>
   requestJson<{ columns: SheetColumn[] }>(`/forms/${formId}/sheet-columns`).then((response) => response.columns);
 export const getBatchTemplateUrl = (formId: string) => buildApiUrl(`/forms/${formId}/batch-template`);
+export const getCombinedBatchTemplateUrl = (formIds: string[]) => buildApiUrl(`/forms/combined-batch-template?formIds=${formIds.map(encodeURIComponent).join(",")}`);
 export const getBlankPageImageUrl = (formId: string, pageNumber: number) => buildApiUrl(`/forms/${formId}/pages/${pageNumber}`);
 
 export function updateRequiredFields(formId: string, requiredFields: string[]) {

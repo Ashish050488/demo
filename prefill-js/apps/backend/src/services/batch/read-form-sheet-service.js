@@ -10,14 +10,15 @@ const MINIMUM_MATCHED_FIELD_COUNT = 2;
 const MAXIMUM_FOREIGN_KEY_SHARE = 0.25;
 
 /** {rows, sheetName, batchColumns, columnMatch, sheetRows}; throws SheetFileError with a plain reason. */
-export async function readFormSheet(formId, fileBytes, fileName) {
+export async function readFormSheet(formId, fileBytes, fileName, { isCombinedSheet = false } = {}) {
   const { rows, sheetName } = await readSheetFile(fileBytes, fileName);
   const batchColumns = await buildBatchColumns(formId);
   const columnMatch = matchSheetColumns(rows, batchColumns);
   const { label: formLabel } = await fetchFormRules(formId);
 
   const keyRowCellCount = columnMatch.matchedFieldCount + columnMatch.unknownHeadings.length;
-  if (columnMatch.isOurTemplate && columnMatch.unknownHeadings.length > keyRowCellCount * MAXIMUM_FOREIGN_KEY_SHARE) {
+  // A combined sheet (several forms) carries the other forms' columns too - those are expected, not foreign.
+  if (!isCombinedSheet && columnMatch.isOurTemplate && columnMatch.unknownHeadings.length > keyRowCellCount * MAXIMUM_FOREIGN_KEY_SHARE) {
     throw new SheetFileError(`This looks like the template for a different form (it has ${columnMatch.unknownHeadings.slice(0, 3).join(", ")}…). Download the template for ${formLabel}.`);
   }
   if (columnMatch.matchedFieldCount < MINIMUM_MATCHED_FIELD_COUNT) {

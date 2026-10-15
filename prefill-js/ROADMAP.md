@@ -176,7 +176,7 @@ our side: Ashish, Tushar). Their words are quoted where they matter.
 - Filters: All / Done / Needs fixing.
 - Bulk actions: "Download all PDFs (ZIP)" and "Save all valid to Sheet".
 
-### [ ] 7. Two forms from one Excel
+### [x] 7. Two forms from one Excel
 **Headline:** one client row fills both the CRN Broking & Demat and CAMS forms.
 **Detail:**
 - The batch picks several forms, and each row creates one case per form.

@@ -42,23 +42,30 @@ function getClientStage(caseEntry, fillSummary) {
 }
 
 export async function buildBatchStatus(batchEntry) {
-  const formRules = await fetchFormRules(batchEntry.formId);
+  const formIds = batchEntry.formIds || [batchEntry.formId];
+  const rulesByFormId = Object.fromEntries(await Promise.all(formIds.map(async (formId) => [formId, await fetchFormRules(formId)])));
+  const formRules = rulesByFormId[formIds[0]];
   const clients = [];
   for (const batchRow of batchEntry.rows) {
     const caseEntry = await getCase(batchRow.caseId);
     if (!caseEntry) continue; // deleted on its own
-    const fillSummary = caseEntry.batchStage === BATCH_STAGES.DONE || caseEntry.confirmedAt ? await summarizeFill(caseEntry.id, formRules) : null;
+    const rowFormRules = rulesByFormId[caseEntry.formId] || formRules;
+    // A form still waiting for its first form's documents shows those documents' progress.
+    const documentSource = caseEntry.documentsFromCaseId && !caseEntry.documentsSharedAt ? (await getCase(caseEntry.documentsFromCaseId)) || caseEntry : caseEntry;
+    const fillSummary = caseEntry.batchStage === BATCH_STAGES.DONE || caseEntry.confirmedAt ? await summarizeFill(caseEntry.id, rowFormRules) : null;
     clients.push({
-      caseId: caseEntry.id, rowNumber: batchRow.rowNumber, clientReference: batchRow.clientReference, displayName: batchRow.displayName,
-      stage: getClientStage(caseEntry, fillSummary), error: caseEntry.batchError || null, rowProblemCount: batchRow.rowProblemCount || 0,
-      documentCount: caseEntry.documents.length,
-      readDocumentCount: caseEntry.documents.filter((caseDocument) => caseDocument.status !== DOCUMENT_STATUSES.PROCESSING).length,
+      caseId: caseEntry.id, formId: caseEntry.formId, formLabel: rowFormRules.label, formShortLabel: rowFormRules.shortLabel || rowFormRules.label,
+      documentsFromCaseId: caseEntry.documentsFromCaseId || null, rowNumber: batchRow.rowNumber, clientReference: batchRow.clientReference, displayName: batchRow.displayName,
+      stage: getClientStage({ ...caseEntry, documents: documentSource.documents }, fillSummary), error: caseEntry.batchError || null, rowProblemCount: batchRow.rowProblemCount || 0,
+      documentCount: documentSource.documents.length,
+      readDocumentCount: documentSource.documents.filter((caseDocument) => caseDocument.status !== DOCUMENT_STATUSES.PROCESSING).length,
       filledCount: fillSummary?.filledCount ?? null, fieldCount: fillSummary?.fieldCount ?? null, problemCount: fillSummary?.problemCount ?? null,
     });
   }
   const stageCounts = Object.fromEntries(Object.values(CLIENT_STAGES).map((stage) => [stage, clients.filter((client) => client.stage === stage).length]));
   return {
-    id: batchEntry.id, formId: batchEntry.formId, formLabel: formRules.label, sheetFileName: batchEntry.sheetFileName,
+    id: batchEntry.id, formId: batchEntry.formId, formIds, formLabel: formIds.map((formId) => rulesByFormId[formId].label).join(" + "),
+    forms: formIds.map((formId) => ({ formId, label: rulesByFormId[formId].label, shortLabel: rulesByFormId[formId].shortLabel || rulesByFormId[formId].label })), sheetFileName: batchEntry.sheetFileName,
     createdAt: batchEntry.createdAt, startedAt: batchEntry.startedAt, warnings: batchEntry.warnings || [], clients, stageCounts,
   };
 }

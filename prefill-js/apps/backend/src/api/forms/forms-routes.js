@@ -20,6 +20,7 @@ const blankFormUpload = multer({
 const formsRouter = express.Router();
 formsRouter.get("/", formsController.handleListForms);
 formsRouter.post("/detect", blankFormUpload.single("file"), formsController.handleDetectForm);
+formsRouter.get("/combined-batch-template", formsController.handleDownloadCombinedBatchTemplate);
 formsRouter.get("/:formId/rules", requireFormMiddleware, formsController.handleGetFormRules);
 formsRouter.put("/:formId/required-fields", requireFormMiddleware, formsController.handleUpdateRequiredFields);
 formsRouter.get("/:formId/field-sources", requireFormMiddleware, formsController.handleGetFieldSources);

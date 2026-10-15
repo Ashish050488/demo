@@ -1,9 +1,9 @@
 import type { BatchListEntry, BatchStatus } from "@/types/batches";
 import { buildApiUrl, requestJson, sendJson } from "./http-client";
 
-export function createBatch(formId: string, sheetFile: File) {
+export function createBatch(formIds: string[], sheetFile: File) {
   const formData = new FormData();
-  formData.append("formId", formId);
+  formData.append("formIds", formIds.join(","));
   formData.append("file", sheetFile);
   return requestJson<BatchStatus>("/batches", { method: "POST", body: formData });
 }

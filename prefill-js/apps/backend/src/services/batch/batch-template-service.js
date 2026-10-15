@@ -4,6 +4,7 @@
 import ExcelJS from "exceljs";
 import { fetchFormRules } from "../forms/form-files-service.js";
 import { buildBatchColumns, COLUMN_SOURCES } from "./batch-columns-helpers.js";
+import { listDerivableBaseKeys } from "./cross-form-values-helpers.js";
 
 const TEMPLATE_DATA_ROW_COUNT = 500; // rows that get dropdowns for tick-box columns
 const FIRST_DATA_ROW_NUMBER = 3;
@@ -71,4 +72,29 @@ export async function buildBatchTemplate(formId) {
   addClientsSheet(workbook, batchColumns);
   addInstructionsSheet(workbook, batchColumns, formRules.label);
   return { fileBytes: Buffer.from(await workbook.xlsx.writeBuffer()), fileName: `${formRules.label} - Excel template.xlsx` };
+}
+
+/** One template for several forms: the first form's columns, then only what the others need on top - a value
+ * another form's column already gives (investor/applicant name, ID type, state, …) is asked once. */
+export async function buildCombinedBatchTemplate(formIds) {
+  const columnsByForm = await Promise.all(formIds.map((formId) => buildBatchColumns(formId)));
+  const rulesByForm = await Promise.all(formIds.map((formId) => fetchFormRules(formId)));
+  const combinedColumns = [...columnsByForm[0]];
+  const includedKeys = new Set(combinedColumns.map((batchColumn) => batchColumn.key));
+  columnsByForm.slice(1).forEach((formColumns, formIndex) => {
+    const derivableBaseKeys = listDerivableBaseKeys(rulesByForm[formIndex + 1]);
+    for (const batchColumn of formColumns) {
+      if (includedKeys.has(batchColumn.key)) continue;
+      const isSingleVersusPerNominee = includedKeys.has(`${batchColumn.key}_n1`) || (batchColumn.key.endsWith("_n1") && includedKeys.has(batchColumn.key.slice(0, -3)));
+      if (isSingleVersusPerNominee || derivableBaseKeys.has(batchColumn.baseKey)) continue;
+      combinedColumns.push(batchColumn);
+      includedKeys.add(batchColumn.key);
+    }
+  });
+  const combinedLabel = rulesByForm.map((formRules) => formRules.label).join(" + ");
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = "360 ONE Form Prefill";
+  addClientsSheet(workbook, combinedColumns);
+  addInstructionsSheet(workbook, combinedColumns, combinedLabel);
+  return { fileBytes: Buffer.from(await workbook.xlsx.writeBuffer()), fileName: `${rulesByForm.map((formRules) => formRules.shortLabel || formRules.label).join(" + ")} - combined Excel template.xlsx` };
 }

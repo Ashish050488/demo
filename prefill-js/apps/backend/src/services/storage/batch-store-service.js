@@ -39,10 +39,11 @@ const updateBatches = (mutate) => runInBatchesQueue(async () => {
   return mutationResult;
 });
 
-/** rows: [{rowNumber, clientReference, displayName, caseId}] in sheet order. */
-export async function createBatch({ formId, sheetFileName, sheetName, rows, warnings }) {
+/** rows: [{rowNumber, formId, clientReference, displayName, caseId, documentsFromCaseId}] in sheet order - one
+ * per client per form. */
+export async function createBatch({ formId, formIds = [formId], sheetFileName, sheetName, rows, warnings }) {
   const batchEntry = {
-    id: crypto.randomUUID(), formId, sheetFileName, sheetName, rows, warnings,
+    id: crypto.randomUUID(), formId, formIds, sheetFileName, sheetName, rows, warnings,
     createdAt: new Date().toISOString(), startedAt: null,
   };
   await updateBatches((batches) => { batches[batchEntry.id] = batchEntry; });

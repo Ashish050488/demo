@@ -2,6 +2,11 @@ export type ClientStage = "waiting" | "reading" | "filling" | "done" | "needs_fi
 
 export interface BatchClient {
   caseId: string;
+  formId: string;
+  formLabel: string;
+  formShortLabel: string;
+  /** Set on a client's 2nd+ form: it uses the documents uploaded for this case. */
+  documentsFromCaseId: string | null;
   rowNumber: number;
   clientReference: string | null;
   displayName: string | null;
@@ -18,6 +23,8 @@ export interface BatchClient {
 export interface BatchStatus {
   id: string;
   formId: string;
+  formIds: string[];
+  forms: { formId: string; label: string; shortLabel: string }[];
   formLabel: string;
   sheetFileName: string;
   createdAt: string;

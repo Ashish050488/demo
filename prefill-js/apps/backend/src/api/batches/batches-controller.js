@@ -21,13 +21,13 @@ export async function requireBatchMiddleware(request, response, next) {
   next();
 }
 
-/** multipart: formId + file (the Excel/CSV). Creates one case per client row. */
+/** multipart: formIds (comma-separated; or formId) + file (the Excel/CSV). One case per client row per form. */
 export async function handleCreateBatch(request, response) {
-  const formId = request.body?.formId;
-  if (!getFormDefinition(formId)) throw new ApiError(400, ERROR_CODES.INVALID_REQUEST, "Unknown formId");
+  const formIds = [...new Set(String(request.body?.formIds || request.body?.formId || "").split(",").map((formId) => formId.trim()).filter(Boolean))];
+  if (!formIds.length || formIds.some((formId) => !getFormDefinition(formId))) throw new ApiError(400, ERROR_CODES.INVALID_REQUEST, "Unknown formId");
   if (!request.file) throw new ApiError(400, ERROR_CODES.INVALID_REQUEST, "No Excel file uploaded");
   try {
-    const batchEntry = await createBatchFromSheet(formId, request.file.buffer, request.file.originalname);
+    const batchEntry = await createBatchFromSheet(formIds, request.file.buffer, request.file.originalname);
     sendData(response, await buildBatchStatus(batchEntry), 201);
   } catch (error) {
     if (error instanceof SheetFileError) throw new ApiError(422, "SHEET_NOT_USABLE", error.message);
@@ -77,7 +77,7 @@ const toSafeFileName = (text) => String(text || "").replace(/[\\/:*?"<>|]+/g, " 
 
 /** Every filled client's PDF (with the reviewer's corrections) in one .zip. Clients still in progress are left out. */
 export async function handleDownloadBatchZip(request, response) {
-  const { clients, formLabel } = await buildBatchStatus(request.batchEntry);
+  const { clients, forms } = await buildBatchStatus(request.batchEntry);
   const finishedClients = clients.filter((client) => FINISHED_STAGES.has(client.stage));
   if (!finishedClients.length) throw new ApiError(409, ERROR_CODES.INVALID_REQUEST, "No client is filled yet");
   const zipFiles = [];
@@ -86,10 +86,13 @@ export async function handleDownloadBatchZip(request, response) {
     if (!caseEntry) continue;
     await regenerateCasePdf(caseEntry);
     const fileLabel = toSafeFileName([client.clientReference || `Row ${client.rowNumber}`, client.displayName].filter(Boolean).join(" - "));
-    zipFiles.push({ name: `${fileLabel}.pdf`, bytes: await readFile(getRegeneratedPdfPath(caseEntry.id)) });
+    // Several forms: one folder per form inside the zip.
+    const folderPrefix = forms.length > 1 ? `${toSafeFileName(client.formShortLabel)}/` : "";
+    zipFiles.push({ name: `${folderPrefix}${fileLabel}.pdf`, bytes: await readFile(getRegeneratedPdfPath(caseEntry.id)) });
   }
+  const clientCount = new Set(finishedClients.map((client) => client.rowNumber)).size;
   response.set("Content-Type", "application/zip")
-    .set("Content-Disposition", `attachment; filename="${toSafeFileName(formLabel)} - ${zipFiles.length} clients.zip"`)
+    .set("Content-Disposition", `attachment; filename="${toSafeFileName(forms.map((form) => form.shortLabel).join(" + "))} - ${clientCount} clients.zip"`)
     .send(buildZipFile(zipFiles));
 }
 
