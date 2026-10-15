@@ -36,7 +36,7 @@ export default function NewBatchPage() {
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchForms().then((loadedForms) => { setForms(loadedForms); setFormIds((current) => (current.length ? current : loadedForms.slice(0, 1).map((form) => form.formId))); })
+    fetchForms().then(setForms) // nothing ticked to start with: the user ticks, or the Excel picks its form
       .catch((error: Error) => setErrorMessage(error.message));
   }, []);
 
@@ -58,13 +58,16 @@ export default function NewBatchPage() {
   }
 
   async function handleSheetChosen([sheetFile]: File[]) {
-    if (!formIds.length || !sheetFile) return;
+    if (!sheetFile) return;
     setErrorMessage(null);
     setInfoMessage(null);
     setWorkMessage("Reading the Excel…");
     try {
       await discardDraftBatch();
-      const createdBatch = await createBatch(formIds, sheetFile);
+      // No form ticked: the Excel's own columns say which form it is for.
+      const createdBatch = formIds.length ? await createBatch(formIds, sheetFile) : await findFittingForm(sheetFile);
+      if (!createdBatch) throw new Error("This Excel doesn't match any form's columns - tick its form, or use that form's Excel template");
+      if (!formIds.length) { setFormIds(createdBatch.formIds); setInfoMessage(`This Excel is for ${createdBatch.formLabel} - ticked it.`); }
       const combinedBatch = await findCombinedFit(createdBatch, sheetFile);
       setBatch(combinedBatch || createdBatch);
       if (combinedBatch) {
@@ -175,7 +178,7 @@ export default function NewBatchPage() {
           <section>
             <StepHeading number={2} title="Excel and documents" isDone={Boolean(batch)} />
             <FileDropZone allowedExtensions={[...DOCUMENT_EXTENSIONS, ...SHEET_EXTENSIONS]} isMultiple isFolderAllowed isFolderOnly isCompact maximumFileCount={MAXIMUM_BATCH_FILE_COUNT}
-              isDisabled={!formIds.length || isWorking} buttonLabel="Choose files"
+              isDisabled={isWorking} buttonLabel="Choose files"
               title={batch ? `${clientCount} clients from ${batch.sheetFileName} · ${matchedClientCount} with documents` : "Drop the folder here"}
               hint="One folder: the client Excel + one folder per client"
               onFilesChosen={handleDocumentsChosen} />

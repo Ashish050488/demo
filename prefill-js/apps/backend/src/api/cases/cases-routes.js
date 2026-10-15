@@ -9,7 +9,7 @@ import { getCaseUploadDirectory } from "../../services/storage/case-store-servic
 import * as casesController from "./cases-controller.js";
 import * as caseDocumentsController from "./case-documents-controller.js";
 import { handleConfirmCase } from "./case-confirm-controller.js";
-import { handleImportCaseSheet, handleRemoveCaseSheet } from "./case-sheet-import-controller.js";
+import { handleImportCaseSheet, handleRemoveCaseSheet, handleGetCaseSheetRow } from "./case-sheet-import-controller.js";
 import * as caseSignatureController from "./case-signature-controller.js";
 import { MAXIMUM_SHEET_FILE_SIZE_BYTES } from "../../services/batch/read-sheet-file-service.js";
 
@@ -59,5 +59,6 @@ casesRouter.post("/:caseId/signature/typed", requireCaseMiddleware, express.json
 casesRouter.post("/:caseId/confirm", requireCaseMiddleware, handleConfirmCase);
 casesRouter.post("/:caseId/sheet-import", requireCaseMiddleware, sheetUpload.single("file"), handleImportCaseSheet);
 casesRouter.delete("/:caseId/sheet-import", requireCaseMiddleware, handleRemoveCaseSheet);
+casesRouter.get("/:caseId/sheet-row", requireCaseMiddleware, handleGetCaseSheetRow);
 
 export default casesRouter;

@@ -41,9 +41,12 @@ export async function fetchPreviewImage(caseId: string, field: string | null, va
   return response.blob();
 }
 
-/** Fill this case from one row of an Excel/CSV. Without rowNumber, a file with several clients returns the rows to pick from. */
+/** This client's imported Excel row (the row's values, never the file) - for the Excel preview on review. */
+export interface CaseSheetRow { fileName: string; sheetName: string | null; rowNumber: number; clientReference: string | null; values: Record<string, string> }
+export const fetchCaseSheetRow = (caseId: string) => requestJson<CaseSheetRow>(`/cases/${caseId}/sheet-row`);
 export const removeCaseSheet = (caseId: string) => requestJson<{ caseId: string }>(`/cases/${caseId}/sheet-import`, { method: "DELETE" });
 
+/** Fill this case from one row of an Excel/CSV. Without rowNumber, a file with several clients returns the rows to pick from. */
 export function importCaseSheet(caseId: string, sheetFile: File, rowNumber?: number) {
   const formData = new FormData();
   formData.append("file", sheetFile);

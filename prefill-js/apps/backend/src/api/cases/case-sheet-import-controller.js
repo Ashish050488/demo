@@ -39,3 +39,14 @@ export async function handleRemoveCaseSheet(request, response) {
   if (request.caseEntry.isFilled) await fillCase({ ...request.caseEntry, typedValues: {} });
   sendData(response, { caseId: request.caseEntry.id });
 }
+
+// GET /api/cases/:caseId/sheet-row - this client's Excel row as it was imported, for the "Excel" preview on review.
+// Only the row's own values are kept (never the file); PAN values live in memory only and are left out here.
+export async function handleGetCaseSheetRow(request, response) {
+  const { sheetImport, typedValues } = request.caseEntry;
+  if (!sheetImport) throw new ApiError(404, ERROR_CODES.NOT_FOUND, "No Excel was imported for this case");
+  sendData(response, {
+    fileName: sheetImport.fileName, sheetName: sheetImport.sheetName || null, rowNumber: sheetImport.rowNumber,
+    clientReference: sheetImport.clientReference || null, values: typedValues || {},
+  });
+}

@@ -2,7 +2,7 @@
 import { formatFieldLabel, getNomineeNumber } from "@prefill/shared";
 import type { ReviewSession } from "@/hooks/useReviewSession";
 import type { CaseField } from "@/types/cases";
-import { getEffectiveValue, getFieldState } from "@/utils/review-field-helpers";
+import { describeValueSourceShort, getEffectiveValue, getFieldState } from "@/utils/review-field-helpers";
 import type { ReviewSection } from "@/utils/review-sections";
 import Tabs from "@/components/ui/Tabs";
 import FieldCell from "./FieldCell";
@@ -16,12 +16,14 @@ interface SectionFieldsProps {
   onSelectField: (caseField: CaseField) => void;
   onChooseTick: (caseField: CaseField, chosenOption: string) => void;
   onSelectNominee: (nomineeNumber: number) => void;
+  onViewSource: (caseField: CaseField) => void;
+  onViewExcel: (caseField: CaseField) => void;
 }
 
 /** One review section in a single compact layout: label above value, as many columns as fit. A nominee section
  * shows one nominee at a time behind tabs, so it looks the same as every other section. */
 export default function SectionFields(props: SectionFieldsProps) {
-  const { session, section, activeNomineeNumber, shownNomineeCount, selectedFieldKey, onSelectField, onChooseTick, onSelectNominee } = props;
+  const { session, section, activeNomineeNumber, shownNomineeCount, selectedFieldKey, onSelectField, onChooseTick, onSelectNominee, onViewSource, onViewExcel } = props;
   const { editedValues, formCheck, formRules } = session;
   const requiredBaseKeys = new Set(formRules?.requiredFields || []);
   const problemKeys = new Set([...formCheck.missing, ...formCheck.invalid.map((problem) => problem.field)]);
@@ -39,6 +41,21 @@ export default function SectionFields(props: SectionFieldsProps) {
         onSelect={() => onSelectField(caseField)} onChange={(typedValue) => session.updateTypedValue(caseField, typedValue)}
         onChooseTick={(chosenOption) => onChooseTick(caseField, chosenOption)} onCommit={() => session.commitField(caseField)} />
     );
+  };
+
+  // Where each value came from, beside its label - no need to click the field to see it.
+  const renderSourceTag = (caseField: CaseField | undefined) => {
+    const sourceText = caseField && describeValueSourceShort(caseField, editedValues.has(caseField.field));
+    if (!caseField || !sourceText) return null;
+    if (caseField.source_doc && !editedValues.has(caseField.field)) {
+      return <button type="button" title="Open the document it was read from" onClick={() => onViewSource(caseField)}
+        className="shrink-0 font-normal text-brand-600 hover:underline">{sourceText} ↗</button>;
+    }
+    if (sourceText === "Excel") {
+      return <button type="button" title="See this client's Excel row" onClick={() => onViewExcel(caseField)}
+        className="shrink-0 font-normal text-emerald-700 hover:underline">Excel ↗</button>;
+    }
+    return <span className={`shrink-0 font-normal ${sourceText === "Edited" ? "text-amber-700" : "text-muted"}`}>{sourceText}</span>;
   };
 
   return (
@@ -63,8 +80,9 @@ export default function SectionFields(props: SectionFieldsProps) {
           const isWideField = Boolean(caseField?.isTickbox && (caseField.options || []).join("").length > 24) || /address/.test(baseKey);
           return (
             <div key={baseKey} className={isWideField ? "col-span-full" : ""}>
-              <div className="mb-1 truncate text-[11px] font-medium text-muted">
-                {formatFieldLabel(baseKey)}{requiredBaseKeys.has(baseKey) ? <span className="text-red-600"> *</span> : null}
+              <div className="mb-1 flex items-baseline gap-2 text-[11px] font-medium text-muted">
+                <span className="min-w-0 flex-1 truncate">{formatFieldLabel(baseKey)}{requiredBaseKeys.has(baseKey) ? <span className="text-red-600"> *</span> : null}</span>
+                {renderSourceTag(caseField)}
               </div>
               {renderCell(caseField)}
             </div>

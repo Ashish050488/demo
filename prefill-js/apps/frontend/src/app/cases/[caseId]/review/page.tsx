@@ -15,6 +15,7 @@ import RequiredFieldsDrawer from "@/components/review/RequiredFieldsDrawer";
 import SectionRail from "@/components/review/SectionRail";
 import SheetImportDialog from "@/components/review/SheetImportDialog";
 import SourceDocumentDialog from "@/components/review/SourceDocumentDialog";
+import ExcelRowDialog from "@/components/review/ExcelRowDialog";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
 import SegmentedControl from "@/components/ui/SegmentedControl";
@@ -41,6 +42,7 @@ export default function CaseReviewPage() {
   const [pageRequest, setPageRequest] = useState<{ pageNumber: number; requestId: number } | null>(null);
   const [previewPane, setPreviewPane] = useState<"form" | "mapping">("form");
   const [sourceField, setSourceField] = useState<CaseField | null>(null);
+  const [excelField, setExcelField] = useState<CaseField | null>(null);
   const [addDocumentNominee, setAddDocumentNominee] = useState<number | null>(null);
   const [blockedFields, setBlockedFields] = useState<{ field: string; reason: string }[]>([]);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -114,7 +116,7 @@ export default function CaseReviewPage() {
   if (!activeSection) return <StatusState title="No fields to review" message="This form has no fields set up yet - check Form setup." />;
   return (
     <div className="flex h-full flex-col">
-      <div className="grid min-h-0 flex-1 grid-cols-[12.5rem_minmax(0,0.95fr)_minmax(0,1.15fr)]">
+      <div className="grid min-h-0 flex-1 grid-cols-[17rem_minmax(0,0.95fr)_minmax(0,1.15fr)]">
         <aside className="flex min-h-0 flex-col border-r border-line bg-white">
           <div className="border-b border-line px-4 py-3">
             <div className="flex gap-3">
@@ -159,7 +161,7 @@ export default function CaseReviewPage() {
             <SectionFields key={activeSection.key} session={session} section={activeSection} selectedFieldKey={selectedField?.field ?? null}
               activeNomineeNumber={Math.min(activeNomineeNumber, shownNomineeCount)} shownNomineeCount={shownNomineeCount}
               onSelectNominee={(nomineeNumber) => { setOpenedNomineeCount((current) => Math.max(current, nomineeNumber)); setActiveNomineeNumber(nomineeNumber); setSelectedFieldKey(null); }}
-              onSelectField={(caseField) => setSelectedFieldKey(caseField.field)} onChooseTick={handleChooseTick} />
+              onSelectField={(caseField) => setSelectedFieldKey(caseField.field)} onChooseTick={handleChooseTick} onViewSource={setSourceField} onViewExcel={setExcelField} />
           </div>
           <FieldDetailBar session={session} caseField={selectedField}
             sectionLabel={(selectedField && getSectionLabel(selectedField.field)) || activeSection.label} onViewSource={setSourceField} onAddDocument={setAddDocumentNominee} />
@@ -178,6 +180,7 @@ export default function CaseReviewPage() {
           </div>
         </div>
       </div>
+      <ExcelRowDialog caseId={caseId} caseField={excelField} onClose={() => setExcelField(null)} />
       <SourceDocumentDialog caseId={caseId} caseField={sourceField} caseDocuments={session.caseSummary?.documents || []} onClose={() => setSourceField(null)} />
       <AddDocumentDialog caseId={caseId} nomineeNumber={addDocumentNominee} onClose={() => setAddDocumentNominee(null)} onDocumentsRead={() => session.reloadFields(true)} />
       <SheetImportDialog caseId={caseId} formId={fieldsView.formId} batchId={session.caseSummary?.batchId} isOpen={isSheetImportOpen} onClose={() => setIsSheetImportOpen(false)} onImported={() => session.reloadFields(true)} />
@@ -190,7 +193,7 @@ export default function CaseReviewPage() {
 /** Same three columns as the loaded page, so nothing jumps when the fields arrive. */
 function ReviewPageSkeleton() {
   return (
-    <div className="grid h-full grid-cols-[12.5rem_minmax(0,0.95fr)_minmax(0,1.15fr)]" role="status" aria-label="Filling the form">
+    <div className="grid h-full grid-cols-[17rem_minmax(0,0.95fr)_minmax(0,1.15fr)]" role="status" aria-label="Filling the form">
       <div className="space-y-3 border-r border-line bg-white p-4">
         <Skeleton className="h-4 w-32" /><Skeleton className="h-1.5 w-full" />
         {Array.from({ length: 6 }, (_unused, index) => <Skeleton key={index} className="h-8 w-full" />)}

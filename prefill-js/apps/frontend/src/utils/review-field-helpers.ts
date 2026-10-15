@@ -83,9 +83,17 @@ export function matchesFilter(fieldState: FieldState, fieldFilter: FieldFilter):
 /** Where the value came from, in a few words. */
 export function describeValueSource(caseField: CaseField, isEdited: boolean): string | null {
   if (isEdited || caseField.decision?.kind === "corrected") return "Corrected by you";
-  if (caseField.isTickbox) return caseField.option_chosen ? "Rule" : null;
+  if (caseField.isTickbox) return caseField.option_chosen ? (caseField.source_file === "batch sheet" ? "From the Excel" : caseField.source_file === "usual answer" ? "Usual answer" : "Rule") : null;
   if (caseField.value == null) return null;
   if (caseField.source_file === "today's date") return "Today";
-  if (caseField.source_file === "batch sheet") return "Batch sheet";
+  if (caseField.source_file?.startsWith("batch sheet")) return "From the Excel";
   return caseField.source_file ? `from ${caseField.source_file}` : null;
+}
+
+/** The same, in one or two words for the tag beside a field's label ("Aadhaar", "Excel", "Edited"). */
+export function describeValueSourceShort(caseField: CaseField, isEdited: boolean): string | null {
+  if (isEdited || caseField.decision?.kind === "corrected" || caseField.source_file === "reviewer") return caseField.value != null || isEdited || caseField.option_chosen ? "Edited" : null;
+  if (caseField.isTickbox ? !caseField.option_chosen : caseField.value == null) return null;
+  const SHORT_NAMES: Record<string, string> = { "today's date": "Today", "batch sheet": "Excel", "batch sheet (from another column)": "Excel", copied: "Copied", "default answer": "Default", "usual answer": "Usual answer" };
+  return caseField.source_file ? SHORT_NAMES[caseField.source_file] || caseField.source_file : null;
 }
