@@ -4,6 +4,7 @@ import multer from "multer";
 import { requireFormMiddleware } from "../../middleware/require-form-middleware.js";
 import { ApiError, ERROR_CODES } from "../../helpers/api-response-helpers.js";
 import * as formsController from "./forms-controller.js";
+import * as formDraftsController from "./form-drafts-controller.js";
 
 const MAXIMUM_BLANK_FORM_SIZE_BYTES = 15 * 1024 * 1024;
 
@@ -19,6 +20,12 @@ const blankFormUpload = multer({
 
 const formsRouter = express.Router();
 formsRouter.get("/", formsController.handleListForms);
+// Add a form: the blank is kept (for previews); a filled sample is read in memory and never written to disk.
+formsRouter.post("/drafts", blankFormUpload.fields([{ name: "blank", maxCount: 1 }, { name: "filled", maxCount: 1 }]), formDraftsController.handleCreateFormDraft);
+formsRouter.get("/drafts/:draftId", formDraftsController.handleGetFormDraft);
+formsRouter.get("/drafts/:draftId/pages/:pageNumber", formDraftsController.handleGetDraftPageImage);
+formsRouter.post("/drafts/:draftId/create", express.json({ limit: "2mb" }), formDraftsController.handleCreateFormFromDraft);
+formsRouter.delete("/drafts/:draftId", formDraftsController.handleDeleteFormDraft);
 formsRouter.post("/detect", blankFormUpload.single("file"), formsController.handleDetectForm);
 formsRouter.get("/combined-batch-template", formsController.handleDownloadCombinedBatchTemplate);
 formsRouter.get("/:formId/rules", requireFormMiddleware, formsController.handleGetFormRules);

@@ -3,6 +3,7 @@
 // On server start, work that a restart interrupted is picked up again: scans left "Reading…" are read again and
 // cases left half-filled are queued again.
 import crypto from "node:crypto";
+import { copySignature } from "../documents/signature-store-service.js";
 import path from "node:path";
 import { existsSync } from "node:fs";
 import { copyFile, mkdir } from "node:fs/promises";
@@ -35,6 +36,7 @@ async function shareDocumentsFromCase(caseEntry) {
     if (identityRecord) storeIdentityRecord(documentId, { ...identityRecord });
     await addCaseDocument(caseEntry.id, { ...sourceDocument, id: documentId, filename, sharedFromDocumentId: sourceDocument.id });
   }
+  await copySignature(sourceCase.id, caseEntry.id);
   await updateCase(caseEntry.id, { documentsSharedAt: new Date().toISOString() });
 }
 

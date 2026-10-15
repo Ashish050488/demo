@@ -26,30 +26,38 @@
   },
   "reviewSections": [
     {
-      "key": "subscription",
-      "label": "Subscription (page 2)",
+      "key": "p2",
+      "label": "Page 2 · Subscription (Excel)",
       "fields": [
         "subscription_amount",
         "series",
-        "initial_sales_charge",
-        "place",
-        "form_date"
+        "initial_sales_charge"
       ]
     },
     {
-      "key": "subscriber",
-      "label": "Subscriber (page 17)",
+      "key": "p16",
+      "label": "Page 16 · Agreement signed",
+      "fields": [
+        "subscriber_name_p16",
+        "form_date_p16",
+        "place"
+      ]
+    },
+    {
+      "key": "p17-subscriber",
+      "label": "Page 17 · Subscriber (KYC + Excel)",
       "fields": [
         "subscriber_name",
         "subscriber_address",
         "email",
         "mobile",
-        "fax"
+        "fax",
+        "form_date"
       ]
     },
     {
-      "key": "bank",
-      "label": "Bank account (page 17)",
+      "key": "p17-bank",
+      "label": "Page 17 · Bank account (Excel)",
       "fields": [
         "bank_name",
         "bank_address",
@@ -64,8 +72,8 @@
       ]
     },
     {
-      "key": "tax-identity",
-      "label": "Tax self-certification (pages 27-28)",
+      "key": "p27",
+      "label": "Page 27 · Account holder (KYC)",
       "fields": [
         "title",
         "surname",
@@ -77,19 +85,251 @@
         "pincode",
         "dob",
         "us_tax_status",
-        "tax_residence_country",
-        "tax_reference_type",
-        "tax_reference_number"
+        "mailing_address_line1",
+        "mailing_address_line2",
+        "mailing_country",
+        "mailing_postcode",
+        "us_tin"
       ]
     },
     {
-      "key": "declarations",
-      "label": "Declarations (pages 57-65)",
+      "key": "p28",
+      "label": "Page 28 · Tax residency (KYC)",
+      "fields": [
+        "tax_residence_country",
+        "tax_reference_type",
+        "tax_reference_number",
+        "subscriber_name_p28",
+        "form_date_p28",
+        "tax_residence_country_2",
+        "tax_reference_type_2",
+        "tax_reference_number_2",
+        "tax_residence_country_3",
+        "tax_reference_type_3",
+        "tax_reference_number_3",
+        "tin_unavailable_reason",
+        "signing_capacity"
+      ]
+    },
+    {
+      "key": "p31",
+      "label": "Page 31 · Entity details (entities only)",
+      "fields": [
+        "entity_legal_name",
+        "entity_country_of_incorporation",
+        "entity_address_street",
+        "entity_address_city",
+        "entity_address_state",
+        "entity_address_postcode",
+        "entity_address_country",
+        "entity_mailing_street",
+        "entity_mailing_city",
+        "entity_mailing_state",
+        "entity_mailing_postcode",
+        "entity_mailing_country"
+      ]
+    },
+    {
+      "key": "p32",
+      "label": "Pages 32-36 · Entity tax status (entities only)",
+      "fields": [
+        "entity_specified_us_person",
+        "entity_us_person_not_specified",
+        "entity_fi_singapore_or_iga",
+        "entity_fi_registered_deemed_compliant",
+        "entity_fi_participating",
+        "entity_fi_sponsored",
+        "entity_fi_trustee_documented_trust",
+        "entity_fi_certified_deemed_compliant",
+        "entity_fi_non_participating",
+        "entity_exempt_beneficial_owner",
+        "entity_active_nffe",
+        "entity_passive_nffe",
+        "entity_active_nfe_crs",
+        "entity_active_nfe_regularly_traded",
+        "entity_active_nfe_governmental",
+        "entity_active_nfe_other",
+        "entity_passive_nfe_crs",
+        "entity_us_tin",
+        "entity_us_exemption",
+        "entity_giin",
+        "sponsoring_entity_name",
+        "sponsoring_entity_giin",
+        "trustee_name",
+        "trustee_giin",
+        "entity_non_reporting_exemption",
+        "exempt_beneficial_owner_status",
+        "direct_reporting_nffe_giin",
+        "nffe_sponsoring_entity_name",
+        "nffe_sponsoring_entity_giin",
+        "entity_tax_residence_country_1",
+        "entity_tax_reference_type_1",
+        "entity_tax_reference_number_1",
+        "entity_tax_residence_country_2",
+        "entity_tax_reference_type_2",
+        "entity_tax_reference_number_2",
+        "entity_tax_residence_country_3",
+        "entity_tax_reference_type_3",
+        "entity_tax_reference_number_3",
+        "entity_tin_unavailable_reason",
+        "entity_fi_type",
+        "entity_other_type",
+        "regularly_traded_corporation_name",
+        "stock_exchange_name",
+        "passive_nffe_controlling_person_1",
+        "passive_nffe_controlling_person_2",
+        "passive_nffe_controlling_person_3",
+        "npj_controlling_person_1",
+        "npj_controlling_person_2",
+        "npj_controlling_person_3",
+        "crs_entity_is_fi",
+        "crs_reporting_fi",
+        "crs_non_reporting_fi",
+        "crs_non_reporting_fi_type",
+        "crs_fi_non_participating_jurisdiction",
+        "crs_npj_fi_type"
+      ]
+    },
+    {
+      "key": "p37",
+      "label": "Page 37 · Entity signatories (entities only)",
+      "fields": [
+        "entity_signatory_1_title",
+        "entity_signatory_2_title",
+        "entity_signatory_1_date",
+        "entity_signatory_2_date"
+      ]
+    },
+    {
+      "key": "p38",
+      "label": "Page 38 · Controlling person (entities only)",
+      "fields": [
+        "cp_surname",
+        "cp_given_name",
+        "cp_middle_name",
+        "cp_address_line1",
+        "cp_address_line2",
+        "cp_country",
+        "cp_postcode",
+        "cp_mailing_line1",
+        "cp_mailing_line2",
+        "cp_mailing_country",
+        "cp_mailing_postcode",
+        "cp_dob",
+        "cp_entity_name_1",
+        "cp_entity_name_2",
+        "cp_entity_name_3"
+      ]
+    },
+    {
+      "key": "p39",
+      "label": "Page 39 · Controlling person tax (entities only)",
+      "fields": [
+        "controlling_person_us_status",
+        "cp_us_tin",
+        "cp_tax_residence_country_1",
+        "cp_tax_reference_type_1",
+        "cp_tax_reference_number_1",
+        "cp_tax_residence_country_2",
+        "cp_tax_reference_type_2",
+        "cp_tax_reference_number_2",
+        "cp_tax_residence_country_3",
+        "cp_tax_reference_type_3",
+        "cp_tax_reference_number_3",
+        "cp_tin_unavailable_reason"
+      ]
+    },
+    {
+      "key": "p41",
+      "label": "Page 41 · Controlling person signed",
+      "fields": [
+        "cp_print_name",
+        "cp_signed_date",
+        "cp_signing_capacity"
+      ]
+    },
+    {
+      "key": "p54",
+      "label": "Page 54 · Accredited investor consent",
+      "fields": [
+        "subscriber_name_p54",
+        "form_date_p54",
+        "authorised_signatory_name_p54",
+        "authorised_signatory_designation_p54"
+      ]
+    },
+    {
+      "key": "p57",
+      "label": "Page 57 · Singapore tax status",
       "fields": [
         "beneficial_owner",
         "singapore_tax_status",
-        "tax_offences",
-        "pep_status"
+        "beneficial_owner_name",
+        "beneficial_owner_address"
+      ]
+    },
+    {
+      "key": "p58",
+      "label": "Pages 58-59 · Singapore tax (non-individual owner)",
+      "fields": [
+        "sg_entity_category",
+        "sg_entity_q1_tax_resident",
+        "sg_entity_q2",
+        "sg_entity_q3",
+        "sg_entity_q4",
+        "sg_entity_q5",
+        "associate_name",
+        "associate_ownership_percent"
+      ]
+    },
+    {
+      "key": "p62",
+      "label": "Page 62 · Tax offences 1(a)-(e)",
+      "fields": [
+        "tax_offence_1a",
+        "tax_offence_1b",
+        "tax_offence_1c",
+        "tax_offence_1d",
+        "tax_offence_1e"
+      ]
+    },
+    {
+      "key": "p63",
+      "label": "Page 63 · Tax offences 1(f)-3, Part II",
+      "fields": [
+        "tax_offence_1f",
+        "tax_offence_1g",
+        "tax_offence_2a",
+        "tax_offence_2b",
+        "tax_offence_2c",
+        "tax_offence_2d",
+        "tax_offence_2e",
+        "tax_offence_3",
+        "tax_offence_part2",
+        "tax_offence_part2_matters"
+      ]
+    },
+    {
+      "key": "p64",
+      "label": "Page 64 · Tax offences signed",
+      "fields": [
+        "subscriber_name_p64",
+        "form_date_p64",
+        "authorised_signatory_name_p64",
+        "authorised_signatory_designation_p64"
+      ]
+    },
+    {
+      "key": "p65",
+      "label": "Page 65 · Politically exposed person",
+      "fields": [
+        "pep_status",
+        "subscriber_name_p65",
+        "form_date_p65",
+        "pep_details_1",
+        "pep_details_2",
+        "pep_details_3",
+        "pep_details_4"
       ]
     }
   ]

@@ -12,7 +12,11 @@ function fontSizeOf(transform) {
 }
 
 export async function extractTextItems(pdfPath) {
-  const bytes = await readFile(pdfPath);
+  return extractTextItemsFromBytes(await readFile(pdfPath));
+}
+
+/** Same, for a PDF held in memory only (an uploaded filled sample is never written to disk). */
+export async function extractTextItemsFromBytes(bytes) {
   const doc = await pdfjs.getDocument({ data: new Uint8Array(bytes), isEvalSupported: false }).promise;
   const pages = [];
   try {

@@ -8,6 +8,8 @@ import BlockedFieldsDialog from "@/components/review/BlockedFieldsDialog";
 import FieldDetailBar from "@/components/review/FieldDetailBar";
 import FieldMappingPane from "@/components/review/FieldMappingPane";
 import FormPreviewPane from "@/components/review/FormPreviewPane";
+import BatchClientSwitcher from "@/components/batches/BatchClientSwitcher";
+import SignatureCard from "@/components/review/SignatureCard";
 import SectionFields from "@/components/review/SectionFields";
 import RequiredFieldsDrawer from "@/components/review/RequiredFieldsDrawer";
 import SectionRail from "@/components/review/SectionRail";
@@ -34,6 +36,9 @@ export default function CaseReviewPage() {
   const session = useReviewSession(caseId);
   const [activeSectionKey, setActiveSectionKey] = useState<string | null>(null);
   const [selectedFieldKey, setSelectedFieldKey] = useState<string | null>(null);
+  // Bumped when the signature changes (the PDF is rebuilt): the preview reloads. pageRequest opens a page from outside.
+  const [previewVersion, setPreviewVersion] = useState(0);
+  const [pageRequest, setPageRequest] = useState<{ pageNumber: number; requestId: number } | null>(null);
   const [previewPane, setPreviewPane] = useState<"form" | "mapping">("form");
   const [sourceField, setSourceField] = useState<CaseField | null>(null);
   const [addDocumentNominee, setAddDocumentNominee] = useState<number | null>(null);
@@ -61,6 +66,11 @@ export default function CaseReviewPage() {
   const activeSection = sections[activeSectionIndex];
   const selectedField = shownFields.find((caseField) => caseField.field === selectedFieldKey) || activeSection?.fields.find((caseField) => caseField.page && (!activeSection.isNomineeSection || getNomineeNumber(caseField.field) === activeNomineeNumber)) || null;
 
+  // Offered as the typed signature: the subscriber / investor / applicant name as it stands on the form.
+  const signerName = ["subscriber_name", "investor_name", "applicant_name"].map((fieldKey) => {
+    const caseField = shownFields.find((candidate) => candidate.field === fieldKey);
+    return caseField ? getEffectiveValue(caseField, editedValues) : null;
+  }).find(Boolean) || "";
   const getSectionLabel = (fieldKey: string) => sections.find((section) => section.fields.some((caseField) => caseField.field === fieldKey))?.label || "";
   const openSection = (sectionIndex: number) => { setActiveSectionKey(sections[sectionIndex]?.key ?? null); setSelectedFieldKey(null); };
   function goToField(fieldKey: string) {
@@ -122,9 +132,13 @@ export default function CaseReviewPage() {
               filledFieldKeys={filledFieldKeys} onSelectSection={(sectionKey) => openSection(sections.findIndex((section) => section.key === sectionKey))} />
           </div>
           <div className="space-y-2 border-t border-line p-3">
-            <Button size="small" className="w-full" onClick={() => setIsSheetImportOpen(true)}>Fill from Excel</Button>
+            <SignatureCard caseId={caseId} suggestedName={signerName} onChanged={() => setPreviewVersion((current) => current + 1)}
+              onGoToPage={(pageNumber) => { setPreviewPane("form"); setPageRequest({ pageNumber, requestId: Date.now() }); }} />
+            <div className="grid grid-cols-2 gap-1.5">
+              <Button size="small" className="w-full" onClick={() => setIsSheetImportOpen(true)}>Fill from Excel</Button>
+              <Button size="small" className="w-full" disabled={isDownloading} onClick={handleDownloadPdf}>{isDownloading ? "Preparing…" : "Download PDF"}</Button>
+            </div>
             <Button variant="primary" className="w-full" onClick={handleContinue}>Continue to save →</Button>
-            <Button size="small" className="w-full" disabled={isDownloading} onClick={handleDownloadPdf}>{isDownloading ? "Preparing…" : "Download PDF"}</Button>
           </div>
         </aside>
         <section className="flex min-h-0 flex-col border-r border-line bg-white">
@@ -151,9 +165,11 @@ export default function CaseReviewPage() {
             sectionLabel={(selectedField && getSectionLabel(selectedField.field)) || activeSection.label} onViewSource={setSourceField} onAddDocument={setAddDocumentNominee} />
         </section>
         <div className="flex min-h-0 flex-col">
+          {session.caseSummary?.batchId ? <BatchClientSwitcher batchId={session.caseSummary.batchId} caseId={caseId} /> : null}
           <div className="min-h-0 flex-1">
             {previewPane === "form"
-              ? <FormPreviewPane caseId={caseId} pageCount={fieldsView.pageCount} selectedField={selectedField} previewValue={selectedField ? getEffectiveValue(selectedField, editedValues) ?? "" : ""}
+              ? <FormPreviewPane key={previewVersion} pageRequest={pageRequest} caseId={caseId} pageCount={fieldsView.pageCount} selectedField={selectedField} previewValue={selectedField ? getEffectiveValue(selectedField, editedValues) ?? "" : ""}
+                  allFields={shownFields} onSelectField={goToField}
                   headerActions={<SegmentedControl options={PREVIEW_PANE_OPTIONS} activeKey={previewPane} onChange={setPreviewPane} />} />
               : <div className="flex h-full flex-col"><div className="border-b border-line bg-white px-3 py-1.5"><SegmentedControl options={PREVIEW_PANE_OPTIONS} activeKey={previewPane} onChange={setPreviewPane} /></div><div className="min-h-0 flex-1"><FieldMappingPane formId={fieldsView.formId} onSelectField={(fieldKey) => {
                 const matchingField = shownFields.find((caseField) => caseField.field === `${fieldKey}_n1` || caseField.field === fieldKey);

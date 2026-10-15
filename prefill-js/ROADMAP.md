@@ -219,7 +219,7 @@ our side: Ashish, Tushar). Their words are quoted where they matter.
 - Preview: the page switcher follows the selected field (already page-aware).
 - Show it in a 15–20 minute call with their global / onboarding team (Friday, per the call).
 
-### [ ] 12. Automatic form mapping (a new form in minutes, not days)
+### [x] 12. Automatic form mapping (a new form in minutes, not days)
 **Headline:** upload a blank form → the app proposes every box and its data source → a person checks it once.
 **Detail:**
 - If the PDF has fillable (AcroForm) fields, read their names and positions directly.

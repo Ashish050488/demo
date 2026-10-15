@@ -1,5 +1,6 @@
 "use client";
 import { useParams, useRouter } from "next/navigation";
+import { isSignatureFile, uploadSignature } from "@/api/signature-api";
 import { useEffect, useState } from "react";
 import { assignDocument, fillCase, removeDocument, swapNominees, uploadDocuments } from "@/api/cases-api";
 import { fetchFormRules } from "@/api/forms-api";
@@ -35,8 +36,13 @@ export default function CaseDocumentsPage() {
 
   async function handleFilesChosen(documentFiles: File[], relativePaths: string[]) {
     try {
-      const uploadResults = await uploadDocuments(caseId, documentFiles, relativePaths);
-      setUploadMessages(uploadResults.filter((uploadResult) => !uploadResult.isAccepted).map((uploadResult) => `${uploadResult.filename}: ${uploadResult.reason}`));
+      // A "signature" image is the client's signature (placed on the form's signature lines), not an ID to read.
+      const signatureFile = documentFiles.find(isSignatureFile);
+      if (signatureFile) await uploadSignature(caseId, signatureFile);
+      const keptIndexes = documentFiles.map((_file, index) => index).filter((index) => documentFiles[index] !== signatureFile);
+      const uploadResults = keptIndexes.length ? await uploadDocuments(caseId, keptIndexes.map((index) => documentFiles[index]), keptIndexes.map((index) => relativePaths[index])) : [];
+      setUploadMessages([...(signatureFile ? [`${signatureFile.name}: used as the client's signature`] : []),
+        ...uploadResults.filter((uploadResult) => !uploadResult.isAccepted).map((uploadResult) => `${uploadResult.filename}: ${uploadResult.reason}`)]);
     } catch (error) {
       setUploadMessages([(error as Error).message]);
     }

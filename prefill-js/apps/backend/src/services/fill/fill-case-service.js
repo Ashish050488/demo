@@ -3,6 +3,7 @@
 // corrections are layered on top at preview/regenerate time. The form only knows profile keys, never document
 // types, and only knows its ID-type rules through form-rules.json.
 import { writeFile, mkdir } from "node:fs/promises";
+import { drawSignatures } from "../pdf/draw-signatures-service.js";
 import path from "node:path";
 import { validatorFor, validateIdNumberFor } from "@prefill/shared";
 import { fillTextFields } from "../pdf/fill-pdf-service.js";
@@ -81,6 +82,7 @@ export async function fillCase(caseEntry) {
 
   const anyNomineeAadhaarLast4 = nomineeNumbers.some((nomineeNumber) => profiles[nomineeNumber]?.aadhaarLast4);
   results.push(...formDefinition.applyTickboxes(pages, formDefinition.formConfiguration, { anyNomineeAadhaarLast4, idTypes, overrides }));
+  await drawSignatures(pdfDoc, pages, formDefinition.formConfiguration, caseEntry.id);
 
   await mkdir(path.dirname(getFilledPdfPath(caseEntry.id)), { recursive: true });
   await writeFile(getFilledPdfPath(caseEntry.id), await pdfDoc.save());

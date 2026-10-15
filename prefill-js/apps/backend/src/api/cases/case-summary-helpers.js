@@ -32,9 +32,18 @@ export function toDocumentSummary(caseDocument) {
   };
 }
 
+const CLIENT_NAME_KEYS = ["subscriber_name", "investor_name", "applicant_name", "name_n1"];
+
+/** Who the case is for: the name typed in the Excel, else the name read from the client's documents. */
+function findClientName(caseEntry) {
+  const typedName = CLIENT_NAME_KEYS.map((fieldKey) => caseEntry.typedValues?.[fieldKey]).find(Boolean);
+  if (typedName) return String(typedName);
+  return caseEntry.documents.map((caseDocument) => caseDocument.foundName || caseDocument.holderName).find(Boolean) || null;
+}
+
 export function toCaseSummary(caseEntry) {
   return {
-    id: caseEntry.id, formId: caseEntry.formId, batchId: caseEntry.batchId || null, createdAt: caseEntry.createdAt,
+    id: caseEntry.id, formId: caseEntry.formId, batchId: caseEntry.batchId || null, createdAt: caseEntry.createdAt, clientName: findClientName(caseEntry),
     isFilled: Boolean(caseEntry.isFilled), confirmedAt: caseEntry.confirmedAt || null,
     documents: caseEntry.documents.map(toDocumentSummary),
   };

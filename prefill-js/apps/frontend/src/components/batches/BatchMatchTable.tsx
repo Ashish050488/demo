@@ -2,8 +2,19 @@ import StatusState from "@/components/ui/StatusState";
 import type { BatchClient, BatchStatus } from "@/types/batches";
 import type { FolderMatch } from "@/utils/match-client-folders";
 
-/** Before starting: every Excel row, which folder's files it got, and anything that needs a look. */
-export default function BatchMatchTable({ batch, clients, folderMatch }: { batch: BatchStatus | null; clients: BatchClient[]; folderMatch: FolderMatch | null }) {
+interface BatchMatchTableProps {
+  batch: BatchStatus | null;
+  clients: BatchClient[];
+  folderMatch: FolderMatch | null;
+  isDisabled?: boolean;
+  /** "+ Add files" on a row: this client's own PAN / Aadhaar, picked from anywhere. */
+  onPickFiles?: (caseId: string, pickedFiles: File[]) => void;
+  onClearPicked?: (caseId: string) => void;
+  pickedCountByCaseId?: Map<string, number>;
+}
+
+/** Before starting: every Excel row, which documents it got (from the folder or picked on the row), and anything to check. */
+export default function BatchMatchTable({ batch, clients, folderMatch, isDisabled = false, onPickFiles, onClearPicked, pickedCountByCaseId = new Map() }: BatchMatchTableProps) {
   if (!batch || !folderMatch) {
     return (
       <section className="rounded-xl border border-line bg-white">
@@ -36,7 +47,21 @@ export default function BatchMatchTable({ batch, clients, folderMatch }: { batch
                   <td className="px-4 py-2 tabular-nums text-muted">{client.rowNumber}</td>
                   <td className="py-2 font-medium">{client.clientReference || "-"}</td>
                   <td className="max-w-[12rem] truncate py-2">{client.displayName || <span className="text-muted">-</span>}</td>
-                  <td className="py-2">{clientFiles ? <span className="text-emerald-700">{clientFiles.files.length} files</span> : <span className="text-muted">Excel only</span>}</td>
+                  <td className="py-2">
+                    <div className="flex items-center gap-2">
+                      {clientFiles ? <span className="text-emerald-700" title={clientFiles.relativePaths.join("\n")}>{clientFiles.files.length} file{clientFiles.files.length === 1 ? "" : "s"}</span> : <span className="text-muted">Excel only</span>}
+                      {onPickFiles ? (
+                        <label className={`cursor-pointer rounded-full border border-line px-2 py-0.5 text-ink hover:bg-canvas ${isDisabled ? "pointer-events-none opacity-50" : ""}`} title="Add this client's PAN, Aadhaar, passport or licence">
+                          + Add files
+                          <input type="file" multiple accept=".pdf,.jpg,.jpeg,.png" className="hidden" disabled={isDisabled}
+                            onChange={(event) => { const pickedFiles = [...(event.target.files || [])]; if (pickedFiles.length) onPickFiles(client.caseId, pickedFiles); event.target.value = ""; }} />
+                        </label>
+                      ) : null}
+                      {pickedCountByCaseId.get(client.caseId) && onClearPicked ? (
+                        <button type="button" disabled={isDisabled} onClick={() => onClearPicked(client.caseId)} className="text-muted hover:text-red-700" title="Remove the files added on this row">✕ {pickedCountByCaseId.get(client.caseId)} added</button>
+                      ) : null}
+                    </div>
+                  </td>
                   <td className="py-2 pr-4 text-amber-800">{notes.join(" · ")}</td>
                 </tr>
               );

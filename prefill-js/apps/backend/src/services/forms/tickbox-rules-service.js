@@ -137,11 +137,23 @@ export function applyOptionTickboxes(pages, formConfiguration, { overrides = {} 
       tickRecords.push(buildTickRecord(tickbox, tickbox.key, box, "ticked", { rule: "always ticked" }));
       continue;
     }
-    const typedAnswer = overrides[tickbox.key];
+    let typedAnswer = overrides[tickbox.key];
+    // A single "tick it" box: yes / x / ✓ ticks it, no / empty leaves it empty.
+    if (tickbox.options.length === 1 && typedAnswer) {
+      if (/^(n|no|false|0|-)$/i.test(String(typedAnswer).trim())) typedAnswer = null;
+      else if (/^(y|yes|x|✓|✔|tick|ticked|true|1)$/i.test(String(typedAnswer).trim())) typedAnswer = tickbox.options[0];
+    }
     const chosenOption = typedAnswer ? matchTypedOption(tickbox.options, typedAnswer) : tickbox.defaultOption;
+    if (!chosenOption && !typedAnswer && tickbox.isOptional) {
+      // Only for some clients (e.g. entity investors): empty is a valid answer, not a problem.
+      tickRecords.push(buildTickRecord(tickbox, tickbox.key, null, null, { status: "not_applicable", rule: "only if it applies", reason: "Only if it applies to this client" }));
+      continue;
+    }
     if (!chosenOption) {
+      // Never guessed: no answer (or one that matches no option) leaves the box empty, listed to fix.
       tickRecords.push(buildTickRecord(tickbox, tickbox.key, null, null, {
-        status: "needs_review", rule: "pick one", reason: `"${typedAnswer}" is not one of: ${tickbox.options.join(" / ")}` }));
+        status: "needs_review", rule: "pick one",
+        reason: typedAnswer ? `"${typedAnswer}" is not one of: ${tickbox.options.join(" / ")}` : `Not answered in the Excel - pick ${tickbox.options.join(" or ")}` }));
       continue;
     }
     const boxes = tickbox.boxesByOption[chosenOption];

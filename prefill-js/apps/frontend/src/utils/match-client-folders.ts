@@ -16,6 +16,20 @@ export interface FolderMatch {
   unmatchedPaths: string[];
 }
 
+/** Files picked for one client by hand ("+ Add files" on its row) join whatever its folder gave it. */
+export function addPickedFiles(folderMatch: FolderMatch, pickedFilesByCaseId: Map<string, File[]>): FolderMatch {
+  const filesByCaseId = new Map(folderMatch.filesByCaseId);
+  for (const [caseId, pickedFiles] of pickedFilesByCaseId) {
+    const current = filesByCaseId.get(caseId) || { files: [], relativePaths: [], skippedCount: 0 };
+    const room = Math.max(0, MAXIMUM_DOCUMENTS_PER_CLIENT - current.files.length);
+    filesByCaseId.set(caseId, {
+      files: [...current.files, ...pickedFiles.slice(0, room)], relativePaths: [...current.relativePaths, ...pickedFiles.slice(0, room).map((file) => file.name)],
+      skippedCount: current.skippedCount + Math.max(0, pickedFiles.length - room),
+    });
+  }
+  return { ...folderMatch, filesByCaseId };
+}
+
 const normalizeFolderName = (folderName: string) => folderName.toLowerCase().replace(/[^a-z0-9]/g, "");
 
 export function matchClientFolders(clients: BatchClient[], files: File[], relativePaths: string[]): FolderMatch {

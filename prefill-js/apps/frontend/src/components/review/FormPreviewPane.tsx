@@ -2,9 +2,11 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { fetchPreviewImage } from "@/api/cases-api";
 import SegmentedControl from "@/components/ui/SegmentedControl";
+import PageJumpButton from "@/components/review/PageJumpButton";
 import Skeleton from "@/components/ui/Skeleton";
 import StatusState from "@/components/ui/StatusState";
 import { usePinchZoom } from "@/hooks/usePinchZoom";
+import { formatFieldLabel } from "@prefill/shared";
 import type { CaseField } from "@/types/cases";
 
 const TYPING_DEBOUNCE_MILLISECONDS = 400;
@@ -18,6 +20,12 @@ interface FormPreviewPaneProps {
   previewValue: string;
   pageCount: number;
   headerActions?: ReactNode;
+  /** Every field with a place on the form: shown as click targets on its page. */
+  allFields?: CaseField[];
+  /** Click on a value in the preview -> edit that field (its section opens, its box gets the cursor). */
+  onSelectField?: (fieldKey: string) => void;
+  /** Open this page from outside (e.g. a signature page); requestId makes the same page openable again. */
+  pageRequest?: { pageNumber: number; requestId: number } | null;
 }
 
 /** The image on screen and what it shows - layout follows this, not the request in flight, so nothing jumps. */
@@ -29,7 +37,7 @@ function readSavedPreviewMode(): PreviewMode {
 
 /** The selected field's page with the typed value drawn in. "Focus": full panel width, moved so the selected
  * field is in view. "Whole page": the entire page fitted into the panel. The ‹ › buttons browse any page. */
-export default function FormPreviewPane({ caseId, selectedField, previewValue, pageCount, headerActions }: FormPreviewPaneProps) {
+export default function FormPreviewPane({ caseId, selectedField, previewValue, pageCount, headerActions, allFields = [], onSelectField, pageRequest = null }: FormPreviewPaneProps) {
   const [shownImage, setShownImage] = useState<ShownImage | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -54,6 +62,7 @@ export default function FormPreviewPane({ caseId, selectedField, previewValue, p
   }
 
   useEffect(() => { setBrowsedPageNumber(null); }, [selectedField?.field]);
+  useEffect(() => { if (pageRequest) setBrowsedPageNumber(pageRequest.pageNumber); }, [pageRequest]);
   useEffect(() => { resetZoom(); }, [selectedField?.field, previewMode, requestedPageNumber, resetZoom]);
 
   useEffect(() => {
@@ -103,6 +112,9 @@ export default function FormPreviewPane({ caseId, selectedField, previewValue, p
     ? { width: "100%", transform: `translateY(${-focusOffset}px)` }
     : { height: "100%", aspectRatio: String(pageAspectRatio), maxWidth: "100%", margin: "0 auto" };
   const isAwayFromField = fieldPageNumber != null && requestedPageNumber !== fieldPageNumber;
+  // Fields drawn on the page in view (one click target per box) - edit straight from the page you are looking at.
+  const fieldsOnShownPage = shownImage ? allFields.filter((caseField) => caseField.page === shownImage.pageNumber && caseField.boxes?.length) : [];
+  const fieldCountOnRequestedPage = allFields.filter((caseField) => caseField.page === requestedPageNumber).length;
   const pageButtonClasses = "grid h-7 w-7 place-items-center rounded-full border border-line text-ink hover:bg-canvas disabled:opacity-30";
 
   return (
@@ -111,13 +123,17 @@ export default function FormPreviewPane({ caseId, selectedField, previewValue, p
         {headerActions}
         <div className="flex items-center gap-1">
           <button type="button" aria-label="Previous page" disabled={requestedPageNumber <= 1} onClick={() => setBrowsedPageNumber(requestedPageNumber - 1)} className={pageButtonClasses}>‹</button>
-          <span className="w-[4.5rem] text-center tabular-nums text-ink">Page {requestedPageNumber} / {pageCount}</span>
+          <PageJumpButton pageNumber={requestedPageNumber} pageCount={pageCount} onJump={setBrowsedPageNumber}
+            fillPages={[...new Set(allFields.map((caseField) => caseField.page).filter((page): page is number => page != null))].sort((first, second) => first - second)} />
           <button type="button" aria-label="Next page" disabled={requestedPageNumber >= pageCount} onClick={() => setBrowsedPageNumber(requestedPageNumber + 1)} className={pageButtonClasses}>›</button>
         </div>
         {isAwayFromField ? (
           <button type="button" title={`Back to the selected field on page ${fieldPageNumber}`} onClick={() => setBrowsedPageNumber(null)}
             className="rounded-full bg-brand-50 px-2.5 py-1 font-medium text-brand-700 hover:bg-brand-100">↩ Field</button>
         ) : null}
+        <span className="hidden shrink-0 rounded-full bg-canvas px-2 py-0.5 xl:inline" title={fieldCountOnRequestedPage ? "Click a value on the page to edit it" : "Nothing to fill on this page"}>
+          {fieldCountOnRequestedPage ? `${fieldCountOnRequestedPage} field${fieldCountOnRequestedPage === 1 ? "" : "s"}` : "No fields"}
+        </span>
         <div className="ml-auto flex items-center gap-2">
           {zoomState.zoom > 1 ? (
             <button type="button" onClick={resetZoom} className="rounded-full border border-line px-2.5 py-1 text-ink hover:bg-canvas">{Math.round(zoomState.zoom * 100)}% · Reset</button>
@@ -136,6 +152,12 @@ export default function FormPreviewPane({ caseId, selectedField, previewValue, p
               <img src={shownImage.url} alt={`Filled form, page ${shownImage.pageNumber}`} className="block h-full w-full bg-white object-contain shadow"
                 onLoad={(event) => setPageAspectRatio(event.currentTarget.naturalWidth / event.currentTarget.naturalHeight)}
                 onDoubleClick={() => choosePreviewMode(isFocusMode ? "page" : "focus")} />
+              {onSelectField ? fieldsOnShownPage.flatMap((caseField) => caseField.boxes.map((box, boxIndex) => (
+                <button key={`${caseField.field}-${boxIndex}`} type="button" title={`Edit: ${formatFieldLabel(caseField.field)}`}
+                  aria-label={`Edit ${formatFieldLabel(caseField.field)}`} onClick={() => onSelectField(caseField.field)}
+                  className={`absolute cursor-pointer rounded-sm border border-transparent hover:border-brand-500 hover:bg-brand-500/10 ${caseField.field === selectedField?.field ? "hidden" : ""}`}
+                  style={{ left: `${box[0] * 100}%`, top: `${box[1] * 100}%`, width: `${Math.max(box[2] - box[0], 0.02) * 100}%`, height: `${Math.max(box[3] - box[1], 0.012) * 100}%` }} />
+              ))) : null}
               {highlightBox ? (
                 <div className="pointer-events-none absolute rounded-sm border-2 border-brand-500 bg-brand-500/10"
                   style={{ left: `${highlightBox[0] * 100}%`, top: `${highlightBox[1] * 100}%`, width: `${(highlightBox[2] - highlightBox[0]) * 100}%`, height: `${(highlightBox[3] - highlightBox[1]) * 100}%` }} />

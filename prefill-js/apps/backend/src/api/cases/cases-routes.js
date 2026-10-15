@@ -10,6 +10,7 @@ import * as casesController from "./cases-controller.js";
 import * as caseDocumentsController from "./case-documents-controller.js";
 import { handleConfirmCase } from "./case-confirm-controller.js";
 import { handleImportCaseSheet } from "./case-sheet-import-controller.js";
+import * as caseSignatureController from "./case-signature-controller.js";
 import { MAXIMUM_SHEET_FILE_SIZE_BYTES } from "../../services/batch/read-sheet-file-service.js";
 
 const MAXIMUM_FILES_PER_REQUEST = 15;
@@ -31,6 +32,8 @@ const documentsUpload = multer({
 
 // An import sheet is only read, never written to disk.
 const sheetUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: MAXIMUM_SHEET_FILE_SIZE_BYTES, files: 1 } });
+// A signature image is small; it is saved by the signature service itself.
+const signatureUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024, files: 1 } });
 
 const casesRouter = express.Router();
 casesRouter.get("/", casesController.handleListCases);
@@ -48,6 +51,11 @@ casesRouter.post("/:caseId/decisions", requireCaseMiddleware, casesController.ha
 casesRouter.post("/:caseId/preview", requireCaseMiddleware, casesController.handlePreviewPage);
 casesRouter.post("/:caseId/regenerate", requireCaseMiddleware, casesController.handleRegenerateCase);
 casesRouter.get("/:caseId/pdf", requireCaseMiddleware, casesController.handleDownloadPdf);
+casesRouter.get("/:caseId/signature/places", requireCaseMiddleware, caseSignatureController.handleGetSignaturePlaces);
+casesRouter.get("/:caseId/signature", requireCaseMiddleware, caseSignatureController.handleGetSignatureImage);
+casesRouter.post("/:caseId/signature", requireCaseMiddleware, signatureUpload.single("file"), caseSignatureController.handleUploadSignature);
+casesRouter.delete("/:caseId/signature", requireCaseMiddleware, caseSignatureController.handleDeleteSignature);
+casesRouter.post("/:caseId/signature/typed", requireCaseMiddleware, express.json(), caseSignatureController.handleSaveTypedSignature);
 casesRouter.post("/:caseId/confirm", requireCaseMiddleware, handleConfirmCase);
 casesRouter.post("/:caseId/sheet-import", requireCaseMiddleware, sheetUpload.single("file"), handleImportCaseSheet);
 

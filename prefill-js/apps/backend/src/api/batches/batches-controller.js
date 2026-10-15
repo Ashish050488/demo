@@ -37,7 +37,11 @@ export async function handleCreateBatch(request, response) {
 
 export async function handleListBatches(request, response) {
   const batches = (await listBatches()).sort((first, second) => String(second.createdAt).localeCompare(String(first.createdAt)));
-  sendData(response, { batches: batches.map((batchEntry) => ({ id: batchEntry.id, formId: batchEntry.formId, sheetFileName: batchEntry.sheetFileName, clientCount: batchEntry.rows.length, createdAt: batchEntry.createdAt, startedAt: batchEntry.startedAt })) });
+  sendData(response, { batches: batches.map((batchEntry) => ({
+    id: batchEntry.id, formId: batchEntry.formId, formIds: batchEntry.formIds || [batchEntry.formId], sheetFileName: batchEntry.sheetFileName,
+    // A row per form per client: count clients, not rows.
+    clientCount: new Set(batchEntry.rows.map((batchRow) => batchRow.rowNumber)).size, createdAt: batchEntry.createdAt, startedAt: batchEntry.startedAt,
+  })) });
 }
 
 export async function handleGetBatch(request, response) {

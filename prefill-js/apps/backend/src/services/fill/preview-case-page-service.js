@@ -2,6 +2,7 @@
 // every saved correction), then renders just that field's page. Written to a per-case scratch PDF; nothing is
 // saved as a decision.
 import { readFile, writeFile } from "node:fs/promises";
+import { drawSignatures } from "../pdf/draw-signatures-service.js";
 import { fillTextFields } from "../pdf/fill-pdf-service.js";
 import { renderPage } from "../pdf/render-page-service.js";
 import { drawTickOption, getTickboxPage } from "../forms/tickbox-rules-service.js";
@@ -36,6 +37,7 @@ export async function renderCasePreviewPage(caseEntry, editedField, editedValue,
     const pageNumber = baselineRecord.page ?? getTickboxPage(formConfiguration, baselineRecord.field);
     if (chosenOption) drawTickOption(pages, formConfiguration, baselineRecord.field, chosenOption, pageNumber);
   }
+  await drawSignatures(pdfDoc, pages, formConfiguration, caseEntry.id);
   await writeFile(getPreviewPdfPath(caseEntry.id), await pdfDoc.save());
   const { png } = await renderPage(getPreviewPdfPath(caseEntry.id), previewPageNumber, { scale: PREVIEW_IMAGE_WIDTH_PIXELS / A4_WIDTH_POINTS });
   return png;

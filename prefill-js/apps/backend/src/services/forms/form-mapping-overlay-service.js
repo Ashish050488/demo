@@ -1,13 +1,19 @@
 // The Form setup screen's overlay: every mapped text box and tick option, as page-fraction boxes over the
 // BLANK form, with where its value comes from and whether it is required.
-import { RULE_TEXT } from "@prefill/shared";
+import { RULE_TEXT, formatFieldLabel } from "@prefill/shared";
 import { fetchPageSizes } from "../pdf/page-size-service.js";
 import { getTickOptionBox } from "./tickbox-rules-service.js";
 import { fetchFieldPositions, fetchFieldSources, fetchFormRules } from "./form-files-service.js";
 
 const SOURCE_WORDS = { typed: "Typed / batch sheet", today: "Today's date", tick: "Tick box (rule / reviewer)" };
-const describeSource = (fieldSource) => (fieldSource?.startsWith("document.") ? "Uploaded documents"
-  : fieldSource?.startsWith("default.") ? `Usually "${fieldSource.slice("default.".length)}" - the Excel can change it` : SOURCE_WORDS[fieldSource] || "Not mapped");
+function describeSource(fieldSource) {
+  if (!fieldSource) return "Not mapped";
+  if (fieldSource.startsWith("document.")) return "Uploaded documents";
+  if (fieldSource.startsWith("default.")) return `Usually "${fieldSource.slice("default.".length)}" - the Excel can change it`;
+  if (fieldSource.startsWith("copy.")) return `Same as ${formatFieldLabel(fieldSource.slice("copy.".length))}`;
+  if (fieldSource.startsWith("today")) return SOURCE_WORDS.today;
+  return SOURCE_WORDS[fieldSource] || "Not mapped";
+}
 
 export async function buildFormMappingOverlay(formDefinition) {
   const { formId, formConfiguration } = formDefinition;

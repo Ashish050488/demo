@@ -37,6 +37,7 @@ export interface BatchStatus {
 export interface BatchListEntry {
   id: string;
   formId: string;
+  formIds: string[];
   sheetFileName: string;
   clientCount: number;
   createdAt: string;

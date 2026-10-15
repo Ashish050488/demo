@@ -17,6 +17,21 @@
     "dob",
     "tax_reference_number",
     "us_tax_status",
-    "pep_status"
+    "pep_status",
+    "beneficial_owner",
+    "singapore_tax_status",
+    "tax_offence_1a",
+    "tax_offence_1b",
+    "tax_offence_1c",
+    "tax_offence_1d",
+    "tax_offence_1e",
+    "tax_offence_1f",
+    "tax_offence_1g",
+    "tax_offence_2a",
+    "tax_offence_2b",
+    "tax_offence_2c",
+    "tax_offence_2d",
+    "tax_offence_2e",
+    "tax_offence_3"
   ]
 }

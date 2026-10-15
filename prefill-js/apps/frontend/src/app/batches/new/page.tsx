@@ -1,5 +1,6 @@
 "use client";
 import { useRouter } from "next/navigation";
+import { isSignatureFile, uploadSignature } from "@/api/signature-api";
 import { useEffect, useMemo, useState } from "react";
 import { createBatch, deleteBatch, startBatch } from "@/api/batches-api";
 import { uploadDocuments } from "@/api/cases-api";
@@ -13,7 +14,7 @@ import PageContainer from "@/components/ui/PageContainer";
 import { ApiRequestError } from "@/api/http-client";
 import type { BatchStatus } from "@/types/batches";
 import type { FormSummary } from "@/types/forms";
-import { matchClientFolders } from "@/utils/match-client-folders";
+import { addPickedFiles, matchClientFolders } from "@/utils/match-client-folders";
 
 const SHEET_EXTENSIONS = [".xlsx", ".xls", ".csv"];
 const DOCUMENT_EXTENSIONS = [".pdf", ".jpg", ".jpeg", ".png"];
@@ -35,6 +36,8 @@ export default function NewBatchPage() {
   const [batch, setBatch] = useState<BatchStatus | null>(null);
   const [documentFiles, setDocumentFiles] = useState<File[]>([]);
   const [relativePaths, setRelativePaths] = useState<string[]>([]);
+  // Files picked per client with "+ Add files" (e.g. your own PAN and Aadhaar), on top of any dropped folder.
+  const [pickedFilesByCaseId, setPickedFilesByCaseId] = useState<Map<string, File[]>>(new Map());
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [workMessage, setWorkMessage] = useState<string | null>(null);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
@@ -46,7 +49,8 @@ export default function NewBatchPage() {
 
   // Documents go to each client's first form only; its other forms share them once they are read.
   const documentClients = useMemo(() => batch?.clients.filter((client) => !client.documentsFromCaseId) || [], [batch]);
-  const folderMatch = useMemo(() => (batch ? matchClientFolders(documentClients, documentFiles, relativePaths) : null), [batch, documentClients, documentFiles, relativePaths]);
+  const folderMatch = useMemo(() => (batch ? addPickedFiles(matchClientFolders(documentClients, documentFiles, relativePaths), pickedFilesByCaseId) : null),
+    [batch, documentClients, documentFiles, relativePaths, pickedFilesByCaseId]);
 
   /** A batch not started yet is only a draft - replace it when the form or the Excel changes. */
   async function discardDraftBatch() {
@@ -122,7 +126,13 @@ export default function NewBatchPage() {
       setWorkMessage(`Uploading documents · client ${clientIndex + 1} of ${clientsWithFiles.length}…`);
       const clientFiles = folderMatch.filesByCaseId.get(client.caseId)!;
       try {
-        const uploadResults = await uploadDocuments(client.caseId, clientFiles.files, clientFiles.relativePaths);
+        // "signature.png" is the client's signature, not an ID document: it goes to the signature places.
+        const signatureFile = clientFiles.files.find(isSignatureFile);
+        if (signatureFile) await uploadSignature(client.caseId, signatureFile);
+        const documentIndexes = clientFiles.files.map((_file, index) => index).filter((index) => clientFiles.files[index] !== signatureFile);
+        const uploadResults = documentIndexes.length
+          ? await uploadDocuments(client.caseId, documentIndexes.map((index) => clientFiles.files[index]), documentIndexes.map((index) => clientFiles.relativePaths[index]))
+          : [];
         for (const uploadResult of uploadResults.filter((result) => !result.isAccepted)) uploadProblems.push(`${client.clientReference}: ${uploadResult.filename} - ${uploadResult.reason}`);
       } catch (error) {
         uploadProblems.push(`${client.clientReference}: ${(error as Error).message}`);
@@ -175,7 +185,10 @@ export default function NewBatchPage() {
           {errorMessage ? <Notice tone="error">{errorMessage}</Notice> : null}
           {batch?.warnings.map((warning) => <Notice key={warning}>{warning}</Notice>)}
         </div>
-        <BatchMatchTable batch={batch} clients={documentClients} folderMatch={folderMatch} />
+        <BatchMatchTable batch={batch} clients={documentClients} folderMatch={folderMatch} isDisabled={isWorking}
+          onPickFiles={(caseId, pickedFiles) => setPickedFilesByCaseId((current) => new Map(current).set(caseId, [...(current.get(caseId) || []), ...pickedFiles]))}
+          onClearPicked={(caseId) => setPickedFilesByCaseId((current) => { const next = new Map(current); next.delete(caseId); return next; })}
+          pickedCountByCaseId={new Map([...pickedFilesByCaseId].map(([caseId, pickedFiles]) => [caseId, pickedFiles.length]))} />
       </div>
     </PageContainer>
   );

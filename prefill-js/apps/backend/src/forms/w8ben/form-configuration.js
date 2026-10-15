@@ -9,6 +9,8 @@ export const W8BEN_FORM_CONFIGURATION = {
   blankFormPath: path.join(BLANK_FORMS_DIRECTORY, "Form W-8BEN.pdf"),
   nomineeHeaderRe: /(?!)/,
   labels: [],
+  // "Signature of beneficial owner" line in Part III (above the printed caption).
+  signatureBoxes: [{ page: 1, x: 112, y: 690, w: 200, h: 28, signer: "subscriber", label: "Beneficial owner's signature" }],
   tickboxes: [
     {
       // "I certify that I have the capacity to sign for the person identified on line 1" - always ticked.

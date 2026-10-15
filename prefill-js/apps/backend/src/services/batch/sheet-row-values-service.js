@@ -76,8 +76,8 @@ export function buildRowValues(rows, rowNumber, columnMatch, batchColumns) {
         cellText = "Others";
       } else if (!matchedOption) {
         report.unmatchedOptions.push({ field: fieldKey, value: cellText, allowed: batchColumn.options });
-        // A box with a usual answer would quietly get that answer - keep the typed text so it shows as "fix this".
-        if (batchColumn.usualOption) typedValues[fieldKey] = cellText;
+        // Keep the typed text, so the box shows as "fix this" instead of looking unanswered (or getting a usual answer).
+        typedValues[fieldKey] = cellText;
         continue;
       } else {
         cellText = matchedOption;

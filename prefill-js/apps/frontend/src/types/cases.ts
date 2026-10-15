@@ -22,6 +22,8 @@ export interface CaseSummary {
   formId: string;
   batchId: string | null;
   createdAt: string;
+  /** From the Excel, else read from the client's documents; null until either exists. */
+  clientName: string | null;
   isFilled: boolean;
   confirmedAt: string | null;
   documents: CaseDocument[];

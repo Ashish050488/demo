@@ -28,6 +28,15 @@ export async function buildBatchColumns(formId) {
   const optionsByBaseKey = Object.fromEntries(formConfiguration.tickboxes.filter((tickbox) => tickbox.options).map((tickbox) => [tickbox.key, tickbox.options]));
   const usualOptionByBaseKey = Object.fromEntries(formConfiguration.tickboxes.filter((tickbox) => tickbox.defaultOption).map((tickbox) => [tickbox.key, tickbox.defaultOption]));
   const presentBaseKeys = new Set([...fields.map((field) => field.key), ...formConfiguration.tickboxes.map((tickbox) => tickbox.key)]);
+  // Every page a value is printed on (its own place, places it repeats, and every box of a tick answer).
+  const pagesByBaseKey = {};
+  const addPage = (baseKey, pageNumber) => { if (pageNumber) (pagesByBaseKey[baseKey] ||= new Set()).add(pageNumber); };
+  for (const field of fields) { addPage(field.key, field.page); for (const repeat of field.alsoAt || []) addPage(field.key, repeat.page); }
+  for (const tickbox of formConfiguration.tickboxes) {
+    addPage(tickbox.key, tickbox.page);
+    for (const boxes of Object.values(tickbox.boxesByOption || {})) for (const box of boxes) addPage(tickbox.key, box.page);
+  }
+  const listPages = (baseKey) => [...(pagesByBaseKey[baseKey] || [])].sort((first, second) => first - second);
 
   // Base keys in review-section order, then anything a section list doesn't mention.
   const sectionOrder = formRules.reviewSections.flatMap((section) => section.fields);
@@ -47,6 +56,7 @@ export async function buildBatchColumns(formId) {
       rule: optionsByBaseKey[baseKey] ? `One of: ${optionsByBaseKey[baseKey].join(" / ")}${usualOptionByBaseKey[baseKey] ? ` (empty = ${usualOptionByBaseKey[baseKey]})` : ""}` : RULE_TEXT[baseKey] || "Free text",
       options: optionsByBaseKey[baseKey] || null,
       usualOption: usualOptionByBaseKey[baseKey] || null,
+      pages: listPages(baseKey), fieldSource: fieldSources[baseKey],
     };
   };
 

@@ -1,6 +1,7 @@
 // "Regenerate PDF": re-fill one case from its first fill results with every reviewer correction applied. Writes
 // to separate -regenerated paths; the first fill's PDF and results are never touched. No OCR here.
 import { readFile, writeFile } from "node:fs/promises";
+import { drawSignatures } from "../pdf/draw-signatures-service.js";
 import { fillTextFields } from "../pdf/fill-pdf-service.js";
 import { drawTickOption, getTickOptionBox } from "../forms/tickbox-rules-service.js";
 import { getFormDefinition } from "../../forms/form-registry.js";
@@ -28,6 +29,7 @@ export async function regenerateCasePdf(caseEntry) {
     tickRecords.push(tickRecord);
   }
 
+  await drawSignatures(pdfDoc, pages, formConfiguration, caseEntry.id);
   const allRecords = [...results, ...tickRecords];
   await writeFile(getRegeneratedPdfPath(caseEntry.id), await pdfDoc.save());
   await writeFile(getRegeneratedResultsPath(caseEntry.id), JSON.stringify(allRecords, null, 2));
