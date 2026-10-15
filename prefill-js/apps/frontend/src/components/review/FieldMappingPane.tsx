@@ -32,7 +32,7 @@ export default function FieldMappingPane({ formId, onSelectField }: { formId: st
       {sourceRows.length ? null : <StatusState title="No field matches" message={`Nothing matches "${filterText}".`} actionLabel="Clear filter" onAction={() => setFilterText("")} />}
       <ul className="flex-1 divide-y divide-line overflow-auto">
         {sourceRows.map(([fieldKey, fieldSource]) => {
-          const documentKey = /^document\.(\w+)$/.exec(fieldSource)?.[1];
+          const documentKey = /^document\.(\w+)(?:\||$)/.exec(fieldSource)?.[1];
           const documentEntry = documentKey ? fieldSources.documentData[documentKey] : null;
           return (
             <li key={fieldKey}>

@@ -17,6 +17,8 @@ export function listPersonNames(caseDocuments: CaseDocument[]): string[] {
 interface NomineeDocumentGroupProps {
   nomineeNumber: number;
   nomineeCount: number;
+  /** "Nominee", or a one-person form's own word ("Subscriber"). */
+  personLabel?: string;
   caseDocuments: CaseDocument[];
   isBusy: boolean;
   /** Puts this person at `targetNominee`; whoever was there takes this place (one swap, any distance). */
@@ -27,10 +29,11 @@ interface NomineeDocumentGroupProps {
 }
 
 /** One nominee: who the documents say this is, a single "Change order" menu, and the cards (drop target too). */
-export default function NomineeDocumentGroup({ nomineeNumber, nomineeCount, caseDocuments, isBusy, onMoveTo, onDropDocument, children }: NomineeDocumentGroupProps) {
+export default function NomineeDocumentGroup({ nomineeNumber, nomineeCount, personLabel = "Nominee", caseDocuments, isBusy, onMoveTo, onDropDocument, children }: NomineeDocumentGroupProps) {
   const [isDropTarget, setIsDropTarget] = useState(false);
   const personNames = listPersonNames(caseDocuments);
   const hasMixedPeople = personNames.length > 1;
+  const slotName = nomineeCount > 1 ? `${personLabel} ${nomineeNumber}` : personLabel;
   const otherNominees = Array.from({ length: nomineeCount }, (_unused, index) => index + 1).filter((choice) => choice !== nomineeNumber);
 
   function handleDragOver(event: DragEvent) {
@@ -56,22 +59,22 @@ export default function NomineeDocumentGroup({ nomineeNumber, nomineeCount, case
             {personNames.length ? personNames.join(" / ") : <span className="font-normal text-muted">No name found yet</span>}
           </div>
           <div className="text-xs text-muted">
-            Nominee {nomineeNumber} · {caseDocuments.length ? `${caseDocuments.length} document${caseDocuments.length === 1 ? "" : "s"}` : "no documents"}
+            {slotName} · {caseDocuments.length ? `${caseDocuments.length} document${caseDocuments.length === 1 ? "" : "s"}` : "no documents"}
             {hasMixedPeople ? <span className="font-medium text-amber-800"> · different names - check</span> : null}
           </div>
         </div>
         {caseDocuments.length && otherNominees.length ? (
-          <select aria-label={`Change the order of Nominee ${nomineeNumber}`} disabled={isBusy} value=""
+          <select aria-label={`Change the order of ${slotName}`} disabled={isBusy} value=""
             onChange={(event) => onMoveTo(Number(event.target.value))}
             className="h-8 shrink-0 cursor-pointer rounded-full border border-transparent bg-transparent px-2 text-xs font-medium text-muted hover:border-line hover:bg-white hover:text-ink">
             <option value="" disabled hidden>Change order</option>
-            {otherNominees.map((choice) => <option key={choice} value={choice}>Make Nominee {choice}</option>)}
+            {otherNominees.map((choice) => <option key={choice} value={choice}>Make {personLabel} {choice}</option>)}
           </select>
         ) : null}
       </header>
       <div className="space-y-2 px-3 pb-3">
         {caseDocuments.length ? children : (
-          <p className="rounded-lg border border-dashed border-line px-4 py-3 text-center text-xs text-muted">Drag a document here to make it Nominee {nomineeNumber}&apos;s.</p>
+          <p className="rounded-lg border border-dashed border-line px-4 py-3 text-center text-xs text-muted">Drag a document here to make it {slotName}&apos;s.</p>
         )}
       </div>
     </section>

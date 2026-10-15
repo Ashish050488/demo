@@ -16,7 +16,7 @@ export default function FormCard({ form, actions, onSelect, isDisabled = false }
       <div className="mt-1 text-[13px] text-muted">{form.purpose}</div>
       <div className="mt-3 flex flex-wrap gap-1.5">
         {form.keyFields.map((keyField) => <span key={keyField} className="rounded-full bg-canvas px-2 py-0.5 text-[11px] text-muted">{keyField}</span>)}
-        <span className="rounded-full bg-canvas px-2 py-0.5 text-[11px] text-muted">Up to {form.supportedNomineeCount} nominees</span>
+        <span className="rounded-full bg-canvas px-2 py-0.5 text-[11px] text-muted">{form.personLabel ? `KYC of the ${form.personLabel.toLowerCase()}` : `Up to ${form.supportedNomineeCount} nominees`}</span>
       </div>
       {form.blankFileName.replace(/\.pdf$/i, "") !== form.label
         ? <div className="mt-3 truncate text-[11px] text-muted" title={form.blankFileName}>📄 {form.blankFileName}</div>

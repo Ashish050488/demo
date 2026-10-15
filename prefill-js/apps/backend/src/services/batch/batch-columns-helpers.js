@@ -15,7 +15,8 @@ const SOURCE_DESCRIPTIONS = {
 function toColumnSource(fieldSource) {
   if (fieldSource === "tick") return COLUMN_SOURCES.TICK;
   if (fieldSource?.startsWith("document.")) return COLUMN_SOURCES.DOCUMENT;
-  return fieldSource === "typed" ? COLUMN_SOURCES.TYPED : null; // "today" and unmapped fields are not columns
+  // "default.X" has a usual answer, but the Excel can still give another.
+  return fieldSource === "typed" || fieldSource?.startsWith("default.") ? COLUMN_SOURCES.TYPED : null; // "today" and unmapped fields are not columns
 }
 
 /** [{key, label, baseKey, nomineeNumber, source, sourceDescription, isRequired, rule, options}] in form order. */
@@ -25,6 +26,7 @@ export async function buildBatchColumns(formId) {
   const requiredBaseKeys = new Set(formRules.requiredFields);
   const nomineeBaseKeys = new Set(formRules.nomineeFieldKeys);
   const optionsByBaseKey = Object.fromEntries(formConfiguration.tickboxes.filter((tickbox) => tickbox.options).map((tickbox) => [tickbox.key, tickbox.options]));
+  const usualOptionByBaseKey = Object.fromEntries(formConfiguration.tickboxes.filter((tickbox) => tickbox.defaultOption).map((tickbox) => [tickbox.key, tickbox.defaultOption]));
   const presentBaseKeys = new Set([...fields.map((field) => field.key), ...formConfiguration.tickboxes.map((tickbox) => tickbox.key)]);
 
   // Base keys in review-section order, then anything a section list doesn't mention.
@@ -42,8 +44,9 @@ export async function buildBatchColumns(formId) {
       sourceDescription: SOURCE_DESCRIPTIONS[source],
       isRequired: requiredBaseKeys.has(baseKey) && (nomineeNumber ?? 1) === 1,
       isRequiredWhenNomineeUsed: requiredBaseKeys.has(baseKey) && (nomineeNumber ?? 1) > 1,
-      rule: optionsByBaseKey[baseKey] ? `One of: ${optionsByBaseKey[baseKey].join(" / ")}` : RULE_TEXT[baseKey] || "Free text",
+      rule: optionsByBaseKey[baseKey] ? `One of: ${optionsByBaseKey[baseKey].join(" / ")}${usualOptionByBaseKey[baseKey] ? ` (empty = ${usualOptionByBaseKey[baseKey]})` : ""}` : RULE_TEXT[baseKey] || "Free text",
       options: optionsByBaseKey[baseKey] || null,
+      usualOption: usualOptionByBaseKey[baseKey] || null,
     };
   };
 

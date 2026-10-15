@@ -24,7 +24,7 @@ export function formatTodayDate() {
 function buildProfileKeyByField(fieldSources) {
   const profileKeyByField = {};
   for (const [fieldKey, fieldSource] of Object.entries(fieldSources)) {
-    const match = /^document\.(\w+)$/.exec(fieldSource);
+    const match = /^document\.(\w+)(?:\||$)/.exec(fieldSource);
     if (match && match[1] !== "idNumber") profileKeyByField[fieldKey] = match[1];
   }
   return profileKeyByField;

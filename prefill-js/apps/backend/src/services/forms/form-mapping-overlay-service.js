@@ -6,7 +6,8 @@ import { getTickOptionBox } from "./tickbox-rules-service.js";
 import { fetchFieldPositions, fetchFieldSources, fetchFormRules } from "./form-files-service.js";
 
 const SOURCE_WORDS = { typed: "Typed / batch sheet", today: "Today's date", tick: "Tick box (rule / reviewer)" };
-const describeSource = (fieldSource) => (fieldSource?.startsWith("document.") ? "Uploaded documents" : SOURCE_WORDS[fieldSource] || "Not mapped");
+const describeSource = (fieldSource) => (fieldSource?.startsWith("document.") ? "Uploaded documents"
+  : fieldSource?.startsWith("default.") ? `Usually "${fieldSource.slice("default.".length)}" - the Excel can change it` : SOURCE_WORDS[fieldSource] || "Not mapped");
 
 export async function buildFormMappingOverlay(formDefinition) {
   const { formId, formConfiguration } = formDefinition;

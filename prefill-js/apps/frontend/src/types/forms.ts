@@ -9,6 +9,7 @@ export interface FormSummary {
   blankFileName: string;
   keyFields: string[];
   supportedNomineeCount: number;
+  personLabel?: string | null;
 }
 
 export interface FormMappingItem {

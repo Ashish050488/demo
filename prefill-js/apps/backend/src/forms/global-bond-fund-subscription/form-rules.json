@@ -1,0 +1,96 @@
+{
+  "_about": "Form-level rules: how the form is recognised, which tab it saves to. One person (the subscriber) - their KYC documents fill the identity fields, the Excel fills the rest.",
+  "formId": "global-bond-fund-subscription",
+  "label": "360 ONE Global Bond Fund - Series II - Subscription",
+  "shortLabel": "Global Bond Fund subscription",
+  "purpose": "Subscribe to 360 ONE Global Bond Fund - Series II (non-U.S. persons): KYC from documents, bank and amount from Excel",
+  "blankFileName": "360 ONE Global Bond Fund - Series II.pdf",
+  "keyFields": [
+    "Subscription amount",
+    "Subscriber name",
+    "Bank account"
+  ],
+  "sheetTabName": "Global Bond Fund",
+  "detectionPhrases": [
+    "360 ONE ALTERNATIVES VCC",
+    "SUBSCRIPTION FORM FOR NON"
+  ],
+  "supportedNomineeCount": 1,
+  "personLabel": "Subscriber",
+  "identityType": {
+    "scope": "shared",
+    "tickboxField": null,
+    "numberField": null,
+    "optionByIdentityKind": {},
+    "numberFieldByIdentityKind": {}
+  },
+  "reviewSections": [
+    {
+      "key": "subscription",
+      "label": "Subscription (page 2)",
+      "fields": [
+        "subscription_amount",
+        "series",
+        "initial_sales_charge",
+        "place",
+        "form_date"
+      ]
+    },
+    {
+      "key": "subscriber",
+      "label": "Subscriber (page 17)",
+      "fields": [
+        "subscriber_name",
+        "subscriber_address",
+        "email",
+        "mobile",
+        "fax"
+      ]
+    },
+    {
+      "key": "bank",
+      "label": "Bank account (page 17)",
+      "fields": [
+        "bank_name",
+        "bank_address",
+        "swift_code",
+        "account_name",
+        "account_number",
+        "further_credit",
+        "correspondent_bank_name",
+        "correspondent_bank_address",
+        "correspondent_swift_code",
+        "correspondent_account_number"
+      ]
+    },
+    {
+      "key": "tax-identity",
+      "label": "Tax self-certification (pages 27-28)",
+      "fields": [
+        "title",
+        "surname",
+        "given_name",
+        "middle_name",
+        "residence_address_line1",
+        "residence_address_line2",
+        "residence_country",
+        "pincode",
+        "dob",
+        "us_tax_status",
+        "tax_residence_country",
+        "tax_reference_type",
+        "tax_reference_number"
+      ]
+    },
+    {
+      "key": "declarations",
+      "label": "Declarations (pages 57-65)",
+      "fields": [
+        "beneficial_owner",
+        "singapore_tax_status",
+        "tax_offences",
+        "pep_status"
+      ]
+    }
+  ]
+}

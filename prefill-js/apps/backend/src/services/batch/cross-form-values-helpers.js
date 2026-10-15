@@ -3,13 +3,17 @@
 // all). These rules translate a row's values for one form into the missing values of another, so the combined
 // template asks for each thing once. ID types go through each form's own identityType rules, never form names.
 
-const NAME_EQUIVALENTS = [["investor_name", "applicant_name"]];
+// Same value, different key on different forms (copied both ways).
+const NAME_EQUIVALENTS = [["investor_name", "applicant_name"], ["subscriber_address", "permanent_address"], ["pincode", "city_postal_code"]];
+// Same date, written day-first on Indian forms and month-first on US ones (dd/mm/yyyy <-> mm/dd/yyyy is one swap).
+const DATE_ORDER_EQUIVALENTS = [["dob", "date_of_birth_us"]];
+const swapDayAndMonth = (date) => String(date).trim().replace(/^(\d{1,2})([/-])(\d{1,2})\2(\d{4})$/, "$3$2$1$2$4");
 const PAN_PATTERN = /^[A-Z]{5}\d{4}[A-Z]$/;
 
 /** Base keys a combined template can leave out for `formRules` because another form's columns produce them. */
 export function listDerivableBaseKeys(formRules) {
   const { tickboxField, numberField, numberFieldByIdentityKind } = formRules.identityType;
-  return new Set([...NAME_EQUIVALENTS.flat(), "relationship", "relationship_option", "relationship_other", "state", "country", "state_country",
+  return new Set([...NAME_EQUIVALENTS.flat(), ...DATE_ORDER_EQUIVALENTS.flat(),"relationship", "relationship_option", "relationship_other", "state", "country", "state_country",
     tickboxField, numberField, ...Object.values(numberFieldByIdentityKind)].filter(Boolean));
 }
 
@@ -39,6 +43,10 @@ export function deriveValuesForForm({ targetRules, targetColumnKeys, targetValue
     derived[fieldKey] = String(value);
   };
   for (const [firstKey, secondKey] of NAME_EQUIVALENTS) { offer(firstKey, sourceValues[secondKey]); offer(secondKey, sourceValues[firstKey]); }
+  for (const [firstKey, secondKey] of DATE_ORDER_EQUIVALENTS) {
+    if (sourceValues[secondKey]) offer(firstKey, swapDayAndMonth(sourceValues[secondKey]));
+    if (sourceValues[firstKey]) offer(secondKey, swapDayAndMonth(sourceValues[firstKey]));
+  }
   // One box on one form, one per nominee on the other (CRN guardian_name vs CAMS guardian_name_n1..3): nominee 1's.
   for (const [fieldKey, value] of Object.entries(sourceValues)) {
     if (fieldKey.endsWith("_n1")) offer(fieldKey.slice(0, -3), value);

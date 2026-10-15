@@ -55,7 +55,9 @@ export async function buildBatchStatus(batchEntry) {
     const fillSummary = caseEntry.batchStage === BATCH_STAGES.DONE || caseEntry.confirmedAt ? await summarizeFill(caseEntry.id, rowFormRules) : null;
     clients.push({
       caseId: caseEntry.id, formId: caseEntry.formId, formLabel: rowFormRules.label, formShortLabel: rowFormRules.shortLabel || rowFormRules.label,
-      documentsFromCaseId: caseEntry.documentsFromCaseId || null, rowNumber: batchRow.rowNumber, clientReference: batchRow.clientReference, displayName: batchRow.displayName,
+      documentsFromCaseId: caseEntry.documentsFromCaseId || null, rowNumber: batchRow.rowNumber, clientReference: batchRow.clientReference,
+      // No name in the sheet: the name read from the client's own documents, once one is read.
+      displayName: batchRow.displayName || documentSource.documents.map((caseDocument) => caseDocument.foundName || caseDocument.holderName).find(Boolean) || null,
       stage: getClientStage({ ...caseEntry, documents: documentSource.documents }, fillSummary), error: caseEntry.batchError || null, rowProblemCount: batchRow.rowProblemCount || 0,
       documentCount: documentSource.documents.length,
       readDocumentCount: documentSource.documents.filter((caseDocument) => caseDocument.status !== DOCUMENT_STATUSES.PROCESSING).length,

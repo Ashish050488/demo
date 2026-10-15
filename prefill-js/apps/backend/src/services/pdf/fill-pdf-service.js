@@ -20,6 +20,13 @@ function round(n) {
 // blank gap below the text, not on the text itself (confirmed by zooming into the rendered highlight: it sat
 // on the line *below* the actual words). Same 0.85/0.15 split already used for glyph boxes in
 // drawCheckmark - keep it consistent.
+/** A one-line value's font size: as given, shrunk (down to 6pt) only when the box has a maxWidth it would overrun. */
+function fitOneLine(value, font, fontSize, maxWidth) {
+  let size = fontSize;
+  while (maxWidth && size > 6 && font.widthOfTextAtSize(value, size) > maxWidth) size -= 0.5;
+  return size;
+}
+
 function glyphBox(x, baselineY, width, fontSize) {
   return { x, y: round(baselineY - fontSize * 0.85), width: round(width), height: round(fontSize * 1.0) };
 }
@@ -30,7 +37,8 @@ function glyphBox(x, baselineY, width, fontSize) {
  * Returns { pdfDoc, results } - the caller saves the PDF and the results JSON itself.
  */
 export async function fillTextFields(formConfig, mapping, getValue) {
-  const blankItems = await extractTextItems(formConfig.blankFormPath);
+  // Only forms that find printed labels or nominee columns need the blank's text (slow on a long form).
+  const blankItems = formConfig.labels.length ? await extractTextItems(formConfig.blankFormPath) : [];
   const boundaries = columnBoundaries(blankItems, formConfig.nomineeHeaderRe);
   const fallbackColWidth = (boundaries ? boundaries[1] - boundaries[0] : 100) - 10;
   const allLabels = resolveLabels(blankItems, formConfig.labels);
@@ -73,7 +81,7 @@ export async function fillTextFields(formConfig, mapping, getValue) {
         const nextY = resolvedLabel ? rowBoundaryY(blankItems, resolvedLabel, allLabels) : null;
         let availableHeight = (nextY != null ? nextY - field.y : field.fontSize * 6) - ROW_BOTTOM_MARGIN;
         if (field.maxY != null) availableHeight = Math.min(availableHeight, field.maxY - field.y);
-        const fit = fitMultiline(value, font, field.fontSize || 10, maxWidthFor(field.key), availableHeight);
+        const fit = fitMultiline(value, font, field.fontSize || 10, field.maxWidth ?? maxWidthFor(field.key), availableHeight);
         const lineHeight = fit.fontSize * LINE_HEIGHT_FACTOR;
         lines = fit.lines.map((line, i) => {
           const lineBaseline = field.y + i * lineHeight;
@@ -85,12 +93,19 @@ export async function fillTextFields(formConfig, mapping, getValue) {
         // the aggregate summary box (evidence panel only) still spans baseline-to-baseline across all lines
         bbox = { x: field.x, y: field.y, width: round(maxLineWidth), height: round(fit.lines.length * lineHeight) };
       } else {
-        const fontSize = field.fontSize || 10;
+        const fontSize = fitOneLine(value, font, field.fontSize || 10, field.maxWidth);
         // A printed grey hint (e.g. "dd-mmm-yyyy") under the value is blanked first so the two don't overlap.
         if (field.cover) page.drawRectangle({ x: field.x + (field.cover.dx || 0), y: baseY - (field.cover.below || 3), width: field.cover.width, height: field.cover.height, color: rgb(1, 1, 1) });
         page.drawText(value, { x: field.x, y: baseY, size: fontSize, font });
         bbox = glyphBox(field.x, field.y, font.widthOfTextAtSize(value, fontSize), fontSize);
         lines = [bbox];
+      }
+      // The same value printed again elsewhere (e.g. the subscriber's name beside every signature): one field to
+      // review, several places on the form. The highlight stays on the first place.
+      for (const repeat of field.alsoAt || []) {
+        const repeatPage = pages[repeat.page - 1];
+        const repeatSize = fitOneLine(value, font, repeat.fontSize || field.fontSize || 10, repeat.maxWidth);
+        repeatPage.drawText(value, { x: repeat.x, y: repeatPage.getHeight() - repeat.y, size: repeatSize, font });
       }
     }
 

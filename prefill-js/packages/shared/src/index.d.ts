@@ -10,13 +10,15 @@ export interface FormRules {
   sheetTabName: string;
   detectionPhrases: string[];
   supportedNomineeCount: number;
+  /** Who the documents belong to on a one-person form ("Subscriber"); nomination forms leave it out. */
+  personLabel?: string;
   requiredFields: string[];
   /** How the review screen splits the form: base field keys per section, in printed order. */
   reviewSections: { key: string; label: string; fields: string[] }[];
   nomineeFieldKeys: string[];
   identityType: {
     scope: "shared" | "perNominee";
-    tickboxField: string;
+    tickboxField: string | null;
     numberField: string | null;
     optionByIdentityKind: Partial<Record<IdentityKind, string>>;
     numberFieldByIdentityKind: Partial<Record<IdentityKind, string>>;

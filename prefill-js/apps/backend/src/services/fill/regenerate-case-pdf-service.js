@@ -2,8 +2,7 @@
 // to separate -regenerated paths; the first fill's PDF and results are never touched. No OCR here.
 import { readFile, writeFile } from "node:fs/promises";
 import { fillTextFields } from "../pdf/fill-pdf-service.js";
-import { drawCheckmark } from "../pdf/pdf-drawing-helpers.js";
-import { getTickOptionBox } from "../forms/tickbox-rules-service.js";
+import { drawTickOption, getTickOptionBox } from "../forms/tickbox-rules-service.js";
 import { getFormDefinition } from "../../forms/form-registry.js";
 import { fetchFieldPositions } from "../forms/form-files-service.js";
 import { fetchLatestDecisionsByField } from "../storage/decision-log-service.js";
@@ -25,7 +24,7 @@ export async function regenerateCasePdf(caseEntry) {
     const tickRecord = chosenOption && box && chosenOption !== baselineRecord.option_chosen
       ? { ...baselineRecord, value: chosenOption, option_chosen: chosenOption, bbox: box, lines: [box], status: "ok", reason: null }
       : baselineRecord;
-    if (tickRecord.bbox) drawCheckmark(pages[tickRecord.page - 1], { x: tickRecord.bbox.x, y: tickRecord.bbox.y, w: tickRecord.bbox.width, h: tickRecord.bbox.height });
+    if (tickRecord.bbox) drawTickOption(pages, formConfiguration, tickRecord.field, tickRecord.option_chosen, tickRecord.page);
     tickRecords.push(tickRecord);
   }
 

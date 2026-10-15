@@ -10,7 +10,7 @@ const DATE_BASE_KEYS = new Set(["dob", "form_date"]);
 const AADHAAR_BASE_KEYS = new Set(["id_details", "id_aadhaar_last4"]);
 const PAN_BASE_KEYS = new Set(["id_pan", "guardian_pan"]);
 const PAN_VALUE_PATTERN = /^[A-Z]{5}\d{4}[A-Z]$/;
-const DISPLAY_NAME_KEYS = ["name_n1", "investor_name", "applicant_name"];
+const DISPLAY_NAME_KEYS = ["name_n1", "investor_name", "applicant_name", "subscriber_name"];
 
 // Everyday words for a printed option: "wife" is the form's "Spouse", "dl" its "Driving License".
 const OPTION_SYNONYMS = {
@@ -25,6 +25,7 @@ export function matchOptionText(typedText, options) {
   if (!typedKey) return null;
   return options.find((option) => normalizeHeadingText(option) === typedKey)
     || options.find((option) => normalizeHeadingText(option).startsWith(typedKey) || typedKey.startsWith(normalizeHeadingText(option).replace(/last4.*$/, "")))
+    || options.find((option) => normalizeHeadingText(option).endsWith(typedKey)) // "A" -> "Series A"
     || null;
 }
 
@@ -75,6 +76,8 @@ export function buildRowValues(rows, rowNumber, columnMatch, batchColumns) {
         cellText = "Others";
       } else if (!matchedOption) {
         report.unmatchedOptions.push({ field: fieldKey, value: cellText, allowed: batchColumn.options });
+        // A box with a usual answer would quietly get that answer - keep the typed text so it shows as "fix this".
+        if (batchColumn.usualOption) typedValues[fieldKey] = cellText;
         continue;
       } else {
         cellText = matchedOption;

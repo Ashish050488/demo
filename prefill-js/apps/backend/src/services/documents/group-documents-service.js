@@ -16,6 +16,7 @@
 import { isSamePersonName } from "@prefill/shared";
 import { getCase, updateCaseDocument } from "../storage/case-store-service.js";
 import { getIdentityRecord } from "./identity-number-memory-service.js";
+import { fetchFormRules } from "../forms/form-files-service.js";
 
 const MAXIMUM_NOMINEE_NUMBER = 3;
 const runningGroupingByCaseId = new Map(); // caseId -> promise of the run in progress
@@ -116,8 +117,12 @@ async function regroup(caseId) {
   const caseEntry = await getCase(caseId);
   if (!caseEntry || caseEntry.confirmedAt) return;
   const documentClues = caseEntry.documents.filter((caseDocument) => caseDocument.status === "done").map(readPersonClues);
-  const personGroups = buildPersonGroups(documentClues);
-  const slotByGroup = chooseNomineeSlots(personGroups, caseEntry.typedValues);
+  const { supportedNomineeCount, personLabel } = await fetchFormRules(caseEntry.formId);
+  // A one-person form (e.g. a subscription form): every document is that person's - nothing to sort.
+  const personGroups = supportedNomineeCount === 1 ? [documentClues] : buildPersonGroups(documentClues);
+  const slotByGroup = supportedNomineeCount === 1
+    ? new Map([[documentClues, { nomineeNumber: 1, reason: `the ${(personLabel || "nominee").toLowerCase()}'s document` }]])
+    : chooseNomineeSlots(personGroups, caseEntry.typedValues);
   for (const personGroup of personGroups) {
     const { nomineeNumber, reason } = slotByGroup.get(personGroup);
     for (const { caseDocument } of personGroup) {

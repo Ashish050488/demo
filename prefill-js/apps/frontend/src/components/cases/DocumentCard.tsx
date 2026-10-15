@@ -2,7 +2,6 @@
 import { DOCUMENT_DRAG_TYPE } from "@/components/cases/NomineeDocumentGroup";
 import type { CaseDocument } from "@/types/cases";
 
-const NOMINEE_CHOICES = [1, 2, 3];
 
 function DocumentStatusLabel({ caseDocument }: { caseDocument: CaseDocument }) {
   if (caseDocument.status === "processing") return <span className="animate-pulse text-xs text-muted">Reading…</span>;
@@ -13,11 +12,13 @@ function DocumentStatusLabel({ caseDocument }: { caseDocument: CaseDocument }) {
 interface DocumentCardProps {
   caseDocument: CaseDocument;
   onAssign: (nomineeNumber: number) => void;
+  /** People this form has (3 nominees; 1 on a subscription form - then there is nowhere to move to). */
+  nomineeCount?: number;
   onRemove: () => void;
 }
 
 /** One uploaded file: what was read from it. Drag it onto another nominee, or use the quiet "Move" menu. */
-export default function DocumentCard({ caseDocument, onAssign, onRemove }: DocumentCardProps) {
+export default function DocumentCard({ caseDocument, onAssign, onRemove, nomineeCount = 3 }: DocumentCardProps) {
   const isRead = caseDocument.status === "done";
   return (
     <div draggable={isRead} onDragStart={(event) => { event.dataTransfer.setData(DOCUMENT_DRAG_TYPE, caseDocument.id); event.dataTransfer.effectAllowed = "move"; }}
@@ -29,7 +30,7 @@ export default function DocumentCard({ caseDocument, onAssign, onRemove }: Docum
           {caseDocument.documentTypeLabel ? <span className="shrink-0 rounded-full bg-canvas px-2 py-0.5 text-xs text-muted">{caseDocument.documentTypeLabel}</span> : null}
           <DocumentStatusLabel caseDocument={caseDocument} />
         </div>
-        {isRead ? (
+        {isRead && nomineeCount > 1 ? (
           <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs">
             {caseDocument.readFieldLabels.length
               ? caseDocument.readFieldLabels.map((readLabel) => <span key={readLabel} className="rounded bg-brand-50 px-1.5 py-0.5 text-brand-700">{readLabel}</span>)
@@ -40,11 +41,11 @@ export default function DocumentCard({ caseDocument, onAssign, onRemove }: Docum
           </div>
         ) : null}
       </div>
-      {isRead ? (
+      {isRead && nomineeCount > 1 ? (
         <select aria-label={`Move ${caseDocument.originalName} to another nominee`} value="" onChange={(event) => onAssign(Number(event.target.value))}
           className="h-7 shrink-0 cursor-pointer rounded-full border border-transparent bg-transparent px-2 text-xs text-muted opacity-0 hover:border-line hover:text-ink focus:opacity-100 group-hover:opacity-100">
           <option value="" disabled hidden>Move</option>
-          {NOMINEE_CHOICES.filter((nomineeNumber) => nomineeNumber !== caseDocument.assignedNominee)
+          {Array.from({ length: nomineeCount }, (_unused, index) => index + 1).filter((nomineeNumber) => nomineeNumber !== caseDocument.assignedNominee)
             .map((nomineeNumber) => <option key={nomineeNumber} value={nomineeNumber}>To Nominee {nomineeNumber}</option>)}
         </select>
       ) : null}

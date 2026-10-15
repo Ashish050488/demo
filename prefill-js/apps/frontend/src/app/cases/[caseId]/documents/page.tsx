@@ -1,7 +1,8 @@
 "use client";
 import { useParams, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { assignDocument, fillCase, removeDocument, swapNominees, uploadDocuments } from "@/api/cases-api";
+import { fetchFormRules } from "@/api/forms-api";
 import CaseStepper from "@/components/cases/CaseStepper";
 import DocumentCard from "@/components/cases/DocumentCard";
 import DocumentDropZone from "@/components/cases/DocumentDropZone";
@@ -13,6 +14,7 @@ import StatusState from "@/components/ui/StatusState";
 import { isSamePersonName } from "@prefill/shared";
 import { useCaseSummary } from "@/hooks/useCaseSummary";
 import type { CaseDocument } from "@/types/cases";
+import type { FormRules } from "@/types/forms";
 
 const MAXIMUM_NOMINEE_COUNT = 3;
 
@@ -23,6 +25,13 @@ export default function CaseDocumentsPage() {
   const [uploadMessages, setUploadMessages] = useState<string[]>([]);
   const [isFilling, setIsFilling] = useState(false);
   const [isSwapping, setIsSwapping] = useState(false);
+  const [formRules, setFormRules] = useState<FormRules | null>(null);
+  const formId = caseSummary?.formId;
+  useEffect(() => { if (formId) fetchFormRules(formId).then(setFormRules).catch(() => setFormRules(null)); }, [formId]);
+  // A one-person form (subscription, W-8BEN): every document is that person's - one group, its own word for them.
+  const maximumNomineeCount = Math.min(MAXIMUM_NOMINEE_COUNT, formRules?.supportedNomineeCount ?? MAXIMUM_NOMINEE_COUNT);
+  const personLabel = formRules?.personLabel || "Nominee";
+  const isOnePersonForm = maximumNomineeCount === 1;
 
   async function handleFilesChosen(documentFiles: File[], relativePaths: string[]) {
     try {
@@ -76,7 +85,7 @@ export default function CaseDocumentsPage() {
   const readingDocuments = caseDocuments.filter((caseDocument) => caseDocument.status === "processing");
   const placedDocuments = caseDocuments.filter((caseDocument) => caseDocument.status !== "processing");
   // Every nominee in use, plus one empty slot to drag a document into (up to the form's three).
-  const nomineeCount = Math.min(MAXIMUM_NOMINEE_COUNT, 1 + Math.max(0, ...placedDocuments.map((caseDocument) => caseDocument.assignedNominee)));
+  const nomineeCount = Math.min(maximumNomineeCount, 1 + Math.max(0, ...placedDocuments.map((caseDocument) => caseDocument.assignedNominee)));
   const nomineeNumbers = Array.from({ length: nomineeCount }, (_unused, index) => index + 1);
   const documentsByNominee = nomineeNumbers.map((nomineeNumber) => placedDocuments.filter((caseDocument) => caseDocument.assignedNominee === nomineeNumber));
   const namesByNominee = documentsByNominee.map(listPersonNames);
@@ -85,14 +94,15 @@ export default function CaseDocumentsPage() {
     .filter((secondNominee) => namesByNominee[firstNominee - 1].some((firstName) => namesByNominee[secondNominee - 1].some((secondName) => isSamePersonName(firstName, secondName))))
     .map((secondNominee) => ({ firstNominee, secondNominee, personName: namesByNominee[firstNominee - 1][0] })));
   const renderCard = (caseDocument: CaseDocument) => (
-    <DocumentCard key={caseDocument.id} caseDocument={caseDocument}
+    <DocumentCard key={caseDocument.id} caseDocument={caseDocument} nomineeCount={maximumNomineeCount}
       onAssign={async (nomineeNumber) => { await assignDocument(caseId, caseDocument.id, nomineeNumber); await reloadCase(); }}
       onRemove={async () => { await removeDocument(caseId, caseDocument.id); await reloadCase(); }} />
   );
 
   return (
     <PageContainer title="Upload documents"
-      description="Drop everything you have for each nominee. Each file is read and grouped with the person whose name is on it."
+      description={isOnePersonForm ? `Drop the ${personLabel.toLowerCase()}'s KYC documents (Aadhaar, PAN, passport, licence). Name, address, date of birth and PAN are read from them.`
+        : "Drop everything you have for each nominee. Each file is read and grouped with the person whose name is on it."}
       actions={<>
         <CaseStepper currentStep="documents" caseId={caseId} />
         {isAnyDocumentProcessing ? <span className="text-xs text-muted">Reading documents…</span> : null}
@@ -110,7 +120,7 @@ export default function CaseDocumentsPage() {
           <h2 className="border-b border-line px-4 py-2.5 text-sm font-semibold">Documents by person <span className="font-normal text-muted">({caseDocuments.length})</span>
             {placedDocuments.length ? <span className="float-right text-xs font-normal text-muted">Drag a document onto another person to move it</span> : null}</h2>
           <div className="min-h-0 flex-1 space-y-2 overflow-auto p-3">
-            {!caseDocuments.length ? <StatusState title="No documents yet" message="Drop each nominee's Aadhaar, PAN, passport or licence on the left. They are grouped by the name on them." /> : null}
+            {!caseDocuments.length ? <StatusState title="No documents yet" message={isOnePersonForm ? `Drop the ${personLabel.toLowerCase()}'s Aadhaar, PAN, passport or licence on the left.` : "Drop each nominee's Aadhaar, PAN, passport or licence on the left. They are grouped by the name on them."} /> : null}
             {readingDocuments.length ? (
               <section className="space-y-2 rounded-xl border border-dashed border-line p-3">
                 <div className="text-xs font-medium text-muted">Reading {readingDocuments.length} document{readingDocuments.length === 1 ? "" : "s"}… each moves to its person when done</div>
@@ -124,7 +134,7 @@ export default function CaseDocumentsPage() {
               </div>
             ))}
             {placedDocuments.length ? nomineeNumbers.map((nomineeNumber) => (
-              <NomineeDocumentGroup key={nomineeNumber} nomineeNumber={nomineeNumber} nomineeCount={MAXIMUM_NOMINEE_COUNT} caseDocuments={documentsByNominee[nomineeNumber - 1]}
+              <NomineeDocumentGroup key={nomineeNumber} nomineeNumber={nomineeNumber} nomineeCount={maximumNomineeCount} personLabel={personLabel} caseDocuments={documentsByNominee[nomineeNumber - 1]}
                 isBusy={isSwapping || isAnyDocumentProcessing} onMoveTo={(targetNominee) => { if (targetNominee !== nomineeNumber) handleSwap(nomineeNumber, targetNominee); }}
                 onDropDocument={async (documentId) => { await assignDocument(caseId, documentId, nomineeNumber); await reloadCase(); }}>
                 {documentsByNominee[nomineeNumber - 1].map(renderCard)}

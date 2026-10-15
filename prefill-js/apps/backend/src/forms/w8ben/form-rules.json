@@ -1,0 +1,59 @@
+{
+  "_about": "Form-level rules. One person (the beneficial owner) - KYC documents fill it; the Excel can override.",
+  "formId": "w8ben",
+  "label": "Form W-8BEN (US tax status, individuals)",
+  "shortLabel": "W-8BEN",
+  "purpose": "US tax certificate of foreign status - filled from the client's KYC documents",
+  "blankFileName": "Form W-8BEN.pdf",
+  "keyFields": [
+    "Name",
+    "Country",
+    "Foreign TIN (PAN)",
+    "Date of birth"
+  ],
+  "sheetTabName": "W-8BEN",
+  "detectionPhrases": [
+    "W-8BEN",
+    "Certificate of Foreign Status"
+  ],
+  "supportedNomineeCount": 1,
+  "personLabel": "Beneficial owner",
+  "identityType": {
+    "scope": "shared",
+    "tickboxField": null,
+    "numberField": null,
+    "optionByIdentityKind": {},
+    "numberFieldByIdentityKind": {}
+  },
+  "reviewSections": [
+    {
+      "key": "owner",
+      "label": "Part I - Beneficial owner",
+      "fields": [
+        "subscriber_name",
+        "citizenship_country",
+        "permanent_address",
+        "city_postal_code",
+        "residence_country",
+        "tax_reference_number",
+        "date_of_birth_us"
+      ]
+    },
+    {
+      "key": "treaty",
+      "label": "Part II - Treaty",
+      "fields": [
+        "treaty_country",
+        "treaty_article"
+      ]
+    },
+    {
+      "key": "certification",
+      "label": "Part III - Certification",
+      "fields": [
+        "certify_capacity",
+        "form_date"
+      ]
+    }
+  ]
+}

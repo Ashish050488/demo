@@ -1,0 +1,11 @@
+{
+  "_about": "Fields that must be filled before a case can be confirmed.",
+  "requiredFields": [
+    "subscriber_name",
+    "citizenship_country",
+    "permanent_address",
+    "residence_country",
+    "tax_reference_number",
+    "date_of_birth_us"
+  ]
+}

@@ -1,0 +1,116 @@
+{
+  "_about": "Where each text field is written on the blank IRS Form W-8BEN (Rev. October 2021): positions from the form's own fill-in boxes. alsoAt = printed again (name under the signature).",
+  "formId": "w8ben",
+  "title": "Form W-8BEN",
+  "fields": [
+    {
+      "key": "subscriber_name",
+      "nominee": null,
+      "page": 1,
+      "x": 38.0,
+      "y": 249.0,
+      "fontSize": 9,
+      "type": "text",
+      "maxWidth": 334,
+      "alsoAt": [
+        {
+          "page": 1,
+          "x": 110.0,
+          "y": 741.0,
+          "fontSize": 9,
+          "maxWidth": 312
+        }
+      ]
+    },
+    {
+      "key": "citizenship_country",
+      "nominee": null,
+      "page": 1,
+      "x": 378.4,
+      "y": 249.0,
+      "fontSize": 9,
+      "type": "text",
+      "maxWidth": 196
+    },
+    {
+      "key": "permanent_address",
+      "nominee": null,
+      "page": 1,
+      "x": 38.0,
+      "y": 273.0,
+      "fontSize": 9,
+      "type": "text",
+      "maxWidth": 536
+    },
+    {
+      "key": "city_postal_code",
+      "nominee": null,
+      "page": 1,
+      "x": 38.0,
+      "y": 297.0,
+      "fontSize": 9,
+      "type": "text",
+      "maxWidth": 400
+    },
+    {
+      "key": "residence_country",
+      "nominee": null,
+      "page": 1,
+      "x": 443.2,
+      "y": 297.0,
+      "fontSize": 9,
+      "type": "text",
+      "maxWidth": 132
+    },
+    {
+      "key": "tax_reference_number",
+      "nominee": null,
+      "page": 1,
+      "x": 38.0,
+      "y": 393.0,
+      "fontSize": 9,
+      "type": "text",
+      "maxWidth": 248
+    },
+    {
+      "key": "date_of_birth_us",
+      "nominee": null,
+      "page": 1,
+      "x": 290.0,
+      "y": 417.0,
+      "fontSize": 9,
+      "type": "text",
+      "maxWidth": 284
+    },
+    {
+      "key": "treaty_country",
+      "nominee": null,
+      "page": 1,
+      "x": 239.6,
+      "y": 441.0,
+      "fontSize": 9,
+      "type": "text",
+      "maxWidth": 198
+    },
+    {
+      "key": "treaty_article",
+      "nominee": null,
+      "page": 1,
+      "x": 66.8,
+      "y": 477.0,
+      "fontSize": 9,
+      "type": "text",
+      "maxWidth": 108
+    },
+    {
+      "key": "form_date",
+      "nominee": null,
+      "page": 1,
+      "x": 434.0,
+      "y": 717.0,
+      "fontSize": 9,
+      "type": "text",
+      "maxWidth": 140
+    }
+  ]
+}

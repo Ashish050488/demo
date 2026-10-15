@@ -4,9 +4,15 @@ import path from "node:path";
 import { FORMS_DIRECTORY } from "../config/paths-config.js";
 import { CRN_BROKING_DEMAT_FORM_CONFIGURATION } from "./crn-broking-demat/form-configuration.js";
 import { CAMS_NOMINATION_FORM_CONFIGURATION } from "./cams-nomination/form-configuration.js";
-import { applyCrnBrokingDematTickboxes, applyCamsNominationTickboxes } from "../services/forms/tickbox-rules-service.js";
+import { GLOBAL_BOND_FUND_SUBSCRIPTION_FORM_CONFIGURATION } from "./global-bond-fund-subscription/form-configuration.js";
+import { W8BEN_FORM_CONFIGURATION } from "./w8ben/form-configuration.js";
+import { applyCrnBrokingDematTickboxes, applyCamsNominationTickboxes, applyOptionTickboxes } from "../services/forms/tickbox-rules-service.js";
 
-export const FORM_IDS = { CRN_BROKING_DEMAT: "crn-broking-demat", CAMS_NOMINATION: "cams-nomination" };
+export const FORM_IDS = {
+  CRN_BROKING_DEMAT: "crn-broking-demat", CAMS_NOMINATION: "cams-nomination",
+  GLOBAL_BOND_FUND_SUBSCRIPTION: "global-bond-fund-subscription", W8BEN: "w8ben",
+};
+const applyUsualAnswerTickboxes = (pages, formConfiguration, tickboxContext) => applyOptionTickboxes(pages, formConfiguration, { overrides: tickboxContext.overrides });
 
 const FORM_DEFINITIONS = {
   [FORM_IDS.CRN_BROKING_DEMAT]: {
@@ -15,6 +21,8 @@ const FORM_DEFINITIONS = {
       anyNomineeAadhaarLast4: tickboxContext.anyNomineeAadhaarLast4, idType: tickboxContext.idTypes[1], overrides: tickboxContext.overrides,
     }),
   },
+  [FORM_IDS.GLOBAL_BOND_FUND_SUBSCRIPTION]: { formConfiguration: GLOBAL_BOND_FUND_SUBSCRIPTION_FORM_CONFIGURATION, applyTickboxes: applyUsualAnswerTickboxes },
+  [FORM_IDS.W8BEN]: { formConfiguration: W8BEN_FORM_CONFIGURATION, applyTickboxes: applyUsualAnswerTickboxes },
   [FORM_IDS.CAMS_NOMINATION]: {
     formConfiguration: CAMS_NOMINATION_FORM_CONFIGURATION,
     applyTickboxes: (pages, formConfiguration, tickboxContext) => applyCamsNominationTickboxes(pages, formConfiguration, {

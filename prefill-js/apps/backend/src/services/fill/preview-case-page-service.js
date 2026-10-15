@@ -3,9 +3,8 @@
 // saved as a decision.
 import { readFile, writeFile } from "node:fs/promises";
 import { fillTextFields } from "../pdf/fill-pdf-service.js";
-import { drawCheckmark } from "../pdf/pdf-drawing-helpers.js";
 import { renderPage } from "../pdf/render-page-service.js";
-import { getTickOptionBox, getTickboxPage } from "../forms/tickbox-rules-service.js";
+import { drawTickOption, getTickboxPage } from "../forms/tickbox-rules-service.js";
 import { getFormDefinition } from "../../forms/form-registry.js";
 import { fetchFieldPositions } from "../forms/form-files-service.js";
 import { fetchLatestDecisionsByField } from "../storage/decision-log-service.js";
@@ -34,9 +33,8 @@ export async function renderCasePreviewPage(caseEntry, editedField, editedValue,
   for (const baselineRecord of baselineRecords) {
     if (!("option_chosen" in baselineRecord)) continue;
     const chosenOption = getEffectiveTickOption(baselineRecord, latestDecisions, { editedField, editedValue });
-    const box = getTickOptionBox(formConfiguration, baselineRecord.field, chosenOption);
     const pageNumber = baselineRecord.page ?? getTickboxPage(formConfiguration, baselineRecord.field);
-    if (box && pageNumber) drawCheckmark(pages[pageNumber - 1], { x: box.x, y: box.y, w: box.width, h: box.height });
+    if (chosenOption) drawTickOption(pages, formConfiguration, baselineRecord.field, chosenOption, pageNumber);
   }
   await writeFile(getPreviewPdfPath(caseEntry.id), await pdfDoc.save());
   const { png } = await renderPage(getPreviewPdfPath(caseEntry.id), previewPageNumber, { scale: PREVIEW_IMAGE_WIDTH_PIXELS / A4_WIDTH_POINTS });

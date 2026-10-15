@@ -18,6 +18,10 @@ export function getTickOptionBox(formConfiguration, fieldKey, optionValue) {
     const optionY = tickbox.optionY[optionValue];
     return optionY == null ? null : { x: tickbox.optionXByColumn[columnNumber - 1], y: optionY, width: tickbox.w, height: tickbox.h };
   }
+  if (tickbox.boxesByOption) {
+    const [firstBox] = tickbox.boxesByOption[optionValue] || [];
+    return firstBox ? { x: firstBox.x, y: firstBox.y, width: tickbox.w, height: tickbox.h } : null;
+  }
   if (tickbox.optionX) {
     const optionX = tickbox.optionX[optionValue];
     return optionX == null ? null : { x: optionX, y: tickbox.y, width: tickbox.w, height: tickbox.h };
@@ -109,4 +113,56 @@ export function applyCamsNominationTickboxes(pages, formConfiguration, { idTypes
     }
   }
   return tickRecords;
+}
+
+/** The option a typed answer means: exact, then ignoring case/punctuation, then a short answer ("A", "no") that
+ * ends an option ("Series A"). null when nothing matches - never a guess. */
+function matchTypedOption(options, typedAnswer) {
+  const typedText = normalizeOptionText(typedAnswer);
+  if (!typedText) return null;
+  return options.find((option) => option === typedAnswer)
+    || options.find((option) => normalizeOptionText(option) === typedText)
+    || options.find((option) => normalizeOptionText(option).endsWith(typedText)) || null;
+}
+
+/** Forms whose tick boxes each have a usual answer (defaultOption) and fixed boxes per option (boxesByOption,
+ * one box or several - e.g. one answer ticked on every question of a questionnaire). The Excel's or reviewer's
+ * answer replaces the usual one; an answer that matches no option leaves the box empty for review. */
+export function applyOptionTickboxes(pages, formConfiguration, { overrides = {} } = {}) {
+  const tickRecords = [];
+  for (const tickbox of formConfiguration.tickboxes) {
+    if (tickbox.isAlwaysTicked) {
+      const box = { x: tickbox.x, y: tickbox.y, width: tickbox.w, height: tickbox.h };
+      drawCheckmark(pages[tickbox.page - 1], { x: box.x, y: box.y, w: box.width, h: box.height });
+      tickRecords.push(buildTickRecord(tickbox, tickbox.key, box, "ticked", { rule: "always ticked" }));
+      continue;
+    }
+    const typedAnswer = overrides[tickbox.key];
+    const chosenOption = typedAnswer ? matchTypedOption(tickbox.options, typedAnswer) : tickbox.defaultOption;
+    if (!chosenOption) {
+      tickRecords.push(buildTickRecord(tickbox, tickbox.key, null, null, {
+        status: "needs_review", rule: "pick one", reason: `"${typedAnswer}" is not one of: ${tickbox.options.join(" / ")}` }));
+      continue;
+    }
+    const boxes = tickbox.boxesByOption[chosenOption];
+    for (const box of boxes) drawCheckmark(pages[(box.page ?? tickbox.page) - 1], { x: box.x, y: box.y, w: tickbox.w, h: tickbox.h });
+    const firstBox = { x: boxes[0].x, y: boxes[0].y, width: tickbox.w, height: tickbox.h };
+    tickRecords.push(buildTickRecord(tickbox, tickbox.key, firstBox, chosenOption, {
+      source_file: typedAnswer ? "typed" : "usual answer",
+      rule: typedAnswer ? "from the Excel / review screen" : `usual answer - change it if this client differs${boxes.length > 1 ? ` (ticks all ${boxes.length} questions)` : ""}`,
+    }));
+  }
+  return tickRecords;
+}
+
+/** Draws an option's tick: every box it has (a questionnaire answer can tick several), else its one box. */
+export function drawTickOption(pages, formConfiguration, fieldKey, optionValue, pageNumber) {
+  const tickbox = formConfiguration.tickboxes.find((candidate) => candidate.key === fieldKey.replace(/_n\d+$/, ""));
+  const boxes = tickbox?.boxesByOption?.[optionValue];
+  if (boxes) {
+    for (const box of boxes) drawCheckmark(pages[(box.page ?? tickbox.page) - 1], { x: box.x, y: box.y, w: tickbox.w, h: tickbox.h });
+    return;
+  }
+  const box = getTickOptionBox(formConfiguration, fieldKey, optionValue);
+  if (box && pageNumber) drawCheckmark(pages[pageNumber - 1], { x: box.x, y: box.y, w: box.width, h: box.height });
 }

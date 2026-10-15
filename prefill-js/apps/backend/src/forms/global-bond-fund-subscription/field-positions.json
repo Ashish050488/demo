@@ -1,0 +1,402 @@
+{
+  "_about": "Where each text field is written on the blank form: page, x/y baseline in PDF points (top-left origin), font size. alsoAt = the same value printed again (e.g. the subscriber's name beside each signature). maxWidth = shrink to fit. Positions read from the client's own filled sample. Tick boxes live in form-configuration.js.",
+  "formId": "global-bond-fund-subscription",
+  "title": "360 ONE Global Bond Fund - Series II - Subscription",
+  "fields": [
+    {
+      "key": "subscriber_name",
+      "nominee": null,
+      "page": 17,
+      "x": 248.2,
+      "y": 125.58,
+      "fontSize": 12,
+      "type": "text",
+      "maxWidth": 240,
+      "alsoAt": [
+        {
+          "page": 16,
+          "x": 154.66,
+          "y": 649.86,
+          "fontSize": 8,
+          "maxWidth": 120
+        },
+        {
+          "page": 17,
+          "x": 118.86,
+          "y": 734.59,
+          "fontSize": 10,
+          "maxWidth": 200
+        },
+        {
+          "page": 28,
+          "x": 173.18,
+          "y": 639.68,
+          "fontSize": 12,
+          "maxWidth": 220
+        },
+        {
+          "page": 54,
+          "x": 227.34,
+          "y": 546.03,
+          "fontSize": 12,
+          "maxWidth": 280
+        },
+        {
+          "page": 64,
+          "x": 281.89,
+          "y": 524.65,
+          "fontSize": 12,
+          "maxWidth": 240
+        },
+        {
+          "page": 65,
+          "x": 82.04,
+          "y": 669.36,
+          "fontSize": 11,
+          "maxWidth": 250
+        }
+      ]
+    },
+    {
+      "key": "subscriber_address",
+      "nominee": null,
+      "page": 17,
+      "x": 246.11,
+      "y": 140.8,
+      "fontSize": 8,
+      "type": "multiline",
+      "maxWidth": 248,
+      "maxY": 176
+    },
+    {
+      "key": "email",
+      "nominee": null,
+      "page": 17,
+      "x": 248.2,
+      "y": 198.38,
+      "fontSize": 11,
+      "type": "text",
+      "maxWidth": 240
+    },
+    {
+      "key": "mobile",
+      "nominee": null,
+      "page": 17,
+      "x": 248.2,
+      "y": 219.85,
+      "fontSize": 11,
+      "type": "text",
+      "maxWidth": 240
+    },
+    {
+      "key": "fax",
+      "nominee": null,
+      "page": 17,
+      "x": 248.2,
+      "y": 243.0,
+      "fontSize": 11,
+      "type": "text",
+      "maxWidth": 240
+    },
+    {
+      "key": "form_date",
+      "nominee": null,
+      "page": 17,
+      "x": 247.68,
+      "y": 260.69,
+      "fontSize": 11,
+      "type": "text",
+      "alsoAt": [
+        {
+          "page": 16,
+          "x": 130.41,
+          "y": 675.03,
+          "fontSize": 8
+        },
+        {
+          "page": 17,
+          "x": 94.25,
+          "y": 756.58,
+          "fontSize": 10
+        },
+        {
+          "page": 28,
+          "x": 173.18,
+          "y": 676.33,
+          "fontSize": 12
+        },
+        {
+          "page": 54,
+          "x": 157.61,
+          "y": 720.84,
+          "fontSize": 12
+        },
+        {
+          "page": 64,
+          "x": 281.89,
+          "y": 499.18,
+          "fontSize": 11
+        },
+        {
+          "page": 65,
+          "x": 78.55,
+          "y": 733.07,
+          "fontSize": 11
+        }
+      ]
+    },
+    {
+      "key": "place",
+      "nominee": null,
+      "page": 16,
+      "x": 131.79,
+      "y": 698.36,
+      "fontSize": 8,
+      "type": "text",
+      "maxWidth": 120
+    },
+    {
+      "key": "subscription_amount",
+      "nominee": null,
+      "page": 2,
+      "x": 278.84,
+      "y": 374.44,
+      "fontSize": 12,
+      "type": "text",
+      "maxWidth": 110
+    },
+    {
+      "key": "initial_sales_charge",
+      "nominee": null,
+      "page": 2,
+      "x": 259.2,
+      "y": 496.19,
+      "fontSize": 11,
+      "type": "text",
+      "maxWidth": 24
+    },
+    {
+      "key": "bank_name",
+      "nominee": null,
+      "page": 17,
+      "x": 245.06,
+      "y": 362.28,
+      "fontSize": 10,
+      "type": "text",
+      "maxWidth": 250
+    },
+    {
+      "key": "bank_address",
+      "nominee": null,
+      "page": 17,
+      "x": 245.59,
+      "y": 384.0,
+      "fontSize": 10,
+      "type": "multiline",
+      "maxWidth": 250,
+      "maxY": 424
+    },
+    {
+      "key": "swift_code",
+      "nominee": null,
+      "page": 17,
+      "x": 245.06,
+      "y": 437.69,
+      "fontSize": 10,
+      "type": "text",
+      "maxWidth": 250
+    },
+    {
+      "key": "account_name",
+      "nominee": null,
+      "page": 17,
+      "x": 245.06,
+      "y": 452.35,
+      "fontSize": 10,
+      "type": "text",
+      "maxWidth": 250
+    },
+    {
+      "key": "account_number",
+      "nominee": null,
+      "page": 17,
+      "x": 245.06,
+      "y": 467.01,
+      "fontSize": 10,
+      "type": "text",
+      "maxWidth": 250
+    },
+    {
+      "key": "further_credit",
+      "nominee": null,
+      "page": 17,
+      "x": 245.06,
+      "y": 488.0,
+      "fontSize": 10,
+      "type": "multiline",
+      "maxWidth": 250,
+      "maxY": 512
+    },
+    {
+      "key": "correspondent_bank_name",
+      "nominee": null,
+      "page": 17,
+      "x": 245.06,
+      "y": 539.79,
+      "fontSize": 10,
+      "type": "text",
+      "maxWidth": 250
+    },
+    {
+      "key": "correspondent_bank_address",
+      "nominee": null,
+      "page": 17,
+      "x": 245.06,
+      "y": 562.0,
+      "fontSize": 10,
+      "type": "multiline",
+      "maxWidth": 250,
+      "maxY": 594
+    },
+    {
+      "key": "correspondent_swift_code",
+      "nominee": null,
+      "page": 17,
+      "x": 245.06,
+      "y": 609.5,
+      "fontSize": 10,
+      "type": "text",
+      "maxWidth": 250
+    },
+    {
+      "key": "correspondent_account_number",
+      "nominee": null,
+      "page": 17,
+      "x": 245.06,
+      "y": 624.3,
+      "fontSize": 10,
+      "type": "text",
+      "maxWidth": 250
+    },
+    {
+      "key": "surname",
+      "nominee": null,
+      "page": 27,
+      "x": 317.24,
+      "y": 155.0,
+      "fontSize": 11,
+      "type": "text",
+      "maxWidth": 150
+    },
+    {
+      "key": "title",
+      "nominee": null,
+      "page": 27,
+      "x": 317.24,
+      "y": 174.81,
+      "fontSize": 11,
+      "type": "text",
+      "maxWidth": 150
+    },
+    {
+      "key": "given_name",
+      "nominee": null,
+      "page": 27,
+      "x": 317.24,
+      "y": 192.97,
+      "fontSize": 11,
+      "type": "text",
+      "maxWidth": 150
+    },
+    {
+      "key": "middle_name",
+      "nominee": null,
+      "page": 27,
+      "x": 317.24,
+      "y": 212.77,
+      "fontSize": 11,
+      "type": "text",
+      "maxWidth": 150
+    },
+    {
+      "key": "residence_address_line1",
+      "nominee": null,
+      "page": 27,
+      "x": 317.24,
+      "y": 262.28,
+      "fontSize": 8,
+      "type": "text",
+      "maxWidth": 215
+    },
+    {
+      "key": "residence_address_line2",
+      "nominee": null,
+      "page": 27,
+      "x": 317.24,
+      "y": 280.44,
+      "fontSize": 8,
+      "type": "text",
+      "maxWidth": 215
+    },
+    {
+      "key": "residence_country",
+      "nominee": null,
+      "page": 27,
+      "x": 317.24,
+      "y": 302.66,
+      "fontSize": 11,
+      "type": "text",
+      "maxWidth": 150
+    },
+    {
+      "key": "pincode",
+      "nominee": null,
+      "page": 27,
+      "x": 317.24,
+      "y": 320.82,
+      "fontSize": 11,
+      "type": "text",
+      "maxWidth": 150
+    },
+    {
+      "key": "dob",
+      "nominee": null,
+      "page": 27,
+      "x": 317.24,
+      "y": 468.04,
+      "fontSize": 12,
+      "type": "text",
+      "maxWidth": 150
+    },
+    {
+      "key": "tax_residence_country",
+      "nominee": null,
+      "page": 28,
+      "x": 118.25,
+      "y": 252.04,
+      "fontSize": 12,
+      "type": "text",
+      "maxWidth": 135
+    },
+    {
+      "key": "tax_reference_type",
+      "nominee": null,
+      "page": 28,
+      "x": 263.13,
+      "y": 252.04,
+      "fontSize": 12,
+      "type": "text",
+      "maxWidth": 120
+    },
+    {
+      "key": "tax_reference_number",
+      "nominee": null,
+      "page": 28,
+      "x": 393.16,
+      "y": 252.04,
+      "fontSize": 12,
+      "type": "text",
+      "maxWidth": 130
+    }
+  ]
+}

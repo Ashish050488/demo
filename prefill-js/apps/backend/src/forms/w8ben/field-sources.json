@@ -1,0 +1,16 @@
+{
+  "_about": "Same conventions as the other forms' field-sources.json. US dates are month first (|monthFirst).",
+  "fieldSources": {
+    "subscriber_name": "document.name|upper",
+    "citizenship_country": "default.INDIA",
+    "permanent_address": "document.address|withoutCareOf|withoutPincode|upper",
+    "city_postal_code": "document.pincode",
+    "residence_country": "document.country|upper",
+    "tax_reference_number": "document.pan",
+    "date_of_birth_us": "document.dob|monthFirst",
+    "treaty_country": "copy.residence_country",
+    "treaty_article": "default.NA",
+    "form_date": "today|monthFirst",
+    "certify_capacity": "tick"
+  }
+}
